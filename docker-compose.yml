@@ -1,0 +1,214 @@
+version: '3.8'
+
+services:
+  # Bitwarden - Password Manager
+  bitwarden:
+    image: vaultwarden/server:latest
+    container_name: launchops_bitwarden
+    restart: unless-stopped
+    environment:
+      - DOMAIN=https://vault.localhost
+      - SIGNUPS_ALLOWED=true
+      - INVITATIONS_ALLOWED=true
+      - WEBSOCKET_ENABLED=true
+    volumes:
+      - ./data/bitwarden:/data
+    ports:
+      - "8000:80"
+    networks:
+      - launchops_network
+
+  # WordPress - Website & CMS
+  wordpress:
+    image: wordpress:latest
+    container_name: launchops_wordpress
+    restart: unless-stopped
+    environment:
+      - WORDPRESS_DB_HOST=wordpress_db
+      - WORDPRESS_DB_NAME=wordpress
+      - WORDPRESS_DB_USER=wordpress
+      - WORDPRESS_DB_PASSWORD=${WORDPRESS_DB_PASSWORD}
+    volumes:
+      - ./data/wordpress:/var/www/html
+    ports:
+      - "8080:80"
+    networks:
+      - launchops_network
+    depends_on:
+      - wordpress_db
+
+  wordpress_db:
+    image: mariadb:latest
+    container_name: launchops_wordpress_db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=${WORDPRESS_DB_PASSWORD}
+    volumes:
+      - ./data/wordpress_db:/var/lib/mysql
+    networks:
+      - launchops_network
+
+  # Mautic - Marketing Automation
+  mautic:
+    image: mautic/mautic:latest
+    container_name: launchops_mautic
+    restart: unless-stopped
+    environment:
+      - MAUTIC_DB_HOST=mautic_db
+      - MAUTIC_DB_NAME=mautic
+      - MAUTIC_DB_USER=mautic
+      - MAUTIC_DB_PASSWORD=${MAUTIC_DB_PASSWORD}
+      - MAUTIC_TRUSTED_PROXIES=0.0.0.0/0
+    volumes:
+      - ./data/mautic:/var/www/html
+    ports:
+      - "8081:80"
+    networks:
+      - launchops_network
+    depends_on:
+      - mautic_db
+
+  mautic_db:
+    image: mariadb:latest
+    container_name: launchops_mautic_db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MAUTIC_DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=mautic
+      - MYSQL_USER=mautic
+      - MYSQL_PASSWORD=${MAUTIC_DB_PASSWORD}
+    volumes:
+      - ./data/mautic_db:/var/lib/mysql
+    networks:
+      - launchops_network
+
+  # Nextcloud - File Storage
+  nextcloud:
+    image: nextcloud:latest
+    container_name: launchops_nextcloud
+    restart: unless-stopped
+    environment:
+      - MYSQL_HOST=nextcloud_db
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
+      - NEXTCLOUD_ADMIN_USER=admin
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost nextcloud
+    volumes:
+      - ./data/nextcloud:/var/www/html
+    ports:
+      - "8082:80"
+    networks:
+      - launchops_network
+    depends_on:
+      - nextcloud_db
+
+  nextcloud_db:
+    image: mariadb:latest
+    container_name: launchops_nextcloud_db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${NEXTCLOUD_DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=nextcloud
+      - MYSQL_USER=nextcloud
+      - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
+    volumes:
+      - ./data/nextcloud_db:/var/lib/mysql
+    networks:
+      - launchops_network
+
+  # Chatwoot - Customer Support
+  chatwoot:
+    image: chatwoot/chatwoot:latest
+    container_name: launchops_chatwoot
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST=chatwoot_db
+      - POSTGRES_DB=chatwoot
+      - POSTGRES_USER=chatwoot
+      - POSTGRES_PASSWORD=${CHATWOOT_DB_PASSWORD}
+      - REDIS_URL=redis://chatwoot_redis:6379
+      - SECRET_KEY_BASE=${CHATWOOT_SECRET_KEY}
+    volumes:
+      - ./data/chatwoot:/app/storage
+    ports:
+      - "8083:3000"
+    networks:
+      - launchops_network
+    depends_on:
+      - chatwoot_db
+      - chatwoot_redis
+
+  chatwoot_db:
+    image: postgres:14
+    container_name: launchops_chatwoot_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=chatwoot
+      - POSTGRES_USER=chatwoot
+      - POSTGRES_PASSWORD=${CHATWOOT_DB_PASSWORD}
+    volumes:
+      - ./data/chatwoot_db:/var/lib/postgresql/data
+    networks:
+      - launchops_network
+
+  chatwoot_redis:
+    image: redis:alpine
+    container_name: launchops_chatwoot_redis
+    restart: unless-stopped
+    networks:
+      - launchops_network
+
+  # Matomo - Analytics
+  matomo:
+    image: matomo:latest
+    container_name: launchops_matomo
+    restart: unless-stopped
+    environment:
+      - MATOMO_DATABASE_HOST=matomo_db
+      - MATOMO_DATABASE_DBNAME=matomo
+      - MATOMO_DATABASE_USERNAME=matomo
+      - MATOMO_DATABASE_PASSWORD=${MATOMO_DB_PASSWORD}
+    volumes:
+      - ./data/matomo:/var/www/html
+    ports:
+      - "8084:80"
+    networks:
+      - launchops_network
+    depends_on:
+      - matomo_db
+
+  matomo_db:
+    image: mariadb:latest
+    container_name: launchops_matomo_db
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MATOMO_DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=matomo
+      - MYSQL_USER=matomo
+      - MYSQL_PASSWORD=${MATOMO_DB_PASSWORD}
+    volumes:
+      - ./data/matomo_db:/var/lib/mysql
+    networks:
+      - launchops_network
+
+networks:
+  launchops_network:
+    driver: bridge
+
+volumes:
+  bitwarden_data:
+  wordpress_data:
+  wordpress_db_data:
+  mautic_data:
+  mautic_db_data:
+  nextcloud_data:
+  nextcloud_db_data:
+  chatwoot_data:
+  chatwoot_db_data:
+  matomo_data:
+  matomo_db_data:
