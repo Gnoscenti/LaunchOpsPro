@@ -1,7 +1,7 @@
 """
 Security Agent — LaunchOps Founder Edition
 Bitwarden/Vaultwarden password management + server hardening + SSL + firewall.
-Merged from microai-launchops security + original Vaultwarden setup.
+Merged from gnoscenti-launchops security + original Vaultwarden setup.
 """
 
 from typing import Dict, List, Optional

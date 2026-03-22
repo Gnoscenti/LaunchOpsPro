@@ -2,7 +2,7 @@
 
 **Build a business like an MBA would. AI + Human Co-Creating GREAT Things.**
 
-LaunchOps Founder Edition is a Tier 3, no-guardrails personal automation engine that launches production-ready businesses with MBA-grade intelligence. It combines an ExecAI coaching layer (Harvard Business School frameworks), a funding intelligence engine (VC, grants, SBIR/STTR, angel), comprehensive IP protection, legal document generation, and a full infrastructure stack — all orchestrated by the Atlas engine.
+LaunchOps Founder Edition is a Tier 3, no-guardrails personal automation engine that launches production-ready businesses with MBA-grade intelligence. It combines an Gnosis Coach coaching layer (Harvard Business School frameworks), a funding intelligence engine (VC, grants, SBIR/STTR, angel), comprehensive IP protection, legal document generation, and a full infrastructure stack — all orchestrated by the Atlas engine.
 
 This is the **solopreneur documentary edition**: every milestone, decision, and AI co-creation moment is logged and narrativized. The story writes itself as you build.
 
@@ -13,7 +13,7 @@ This is the **solopreneur documentary edition**: every milestone, decision, and 
 | Feature | v1.0 | v2.0 |
 |---------|------|------|
 | Agents | 5 (security, WordPress, Stripe, Mautic, paralegal) | **9+ agents** with full LLM integration |
-| Coaching | None | **ExecAI Strategic Catalyst** — HBS case method, Porter's Five Forces, Blue Ocean |
+| Coaching | None | **Gnosis Coach Strategic Catalyst** — HBS case method, Porter's Five Forces, Blue Ocean |
 | Funding | None | **Funding Intelligence Engine** — VC, SBIR/STTR, grants, angel, formation optimizer |
 | Legal/IP | Basic paralegal checklist | **Full IP Protection Protocol** — NDA, CIIA, IP Assignment, Trade Secrets, Privacy Policy, ToS |
 | Business Planning | None | **Business Builder** — Build Spec intake, BMC, competitive analysis, pricing, 90-day ops plan |
@@ -37,7 +37,7 @@ launchops-founder-edition/
 │   └── orchestrator.py       # Atlas orchestrator — stage pipeline
 ├── agents/
 │   ├── base.py               # BaseAgent with LLM integration
-│   ├── execai_coach.py       # ExecAI Strategic Catalyst (HBS frameworks)
+│   ├── execai_coach.py       # Gnosis Coach Strategic Catalyst (HBS frameworks)
 │   ├── funding_intelligence.py # VC/grant/SBIR funding engine
 │   ├── paperwork_agent.py    # IP protection + legal document generation
 │   ├── business_builder.py   # Build Spec, BMC, GTM, pricing, ops plan
@@ -75,7 +75,7 @@ launchops-founder-edition/
 
 ```bash
 # Clone
-git clone https://github.com/MicroAIStudios-DAO/launchops-founder-edition.git
+git clone https://github.com/GnoscentiStudios-DAO/launchops-founder-edition.git
 cd launchops-founder-edition
 
 # Install dependencies
@@ -133,7 +133,7 @@ python launchops.py launch
 python launchops.py formation     # Entity structure optimizer
 python launchops.py funding       # Funding readiness report
 python launchops.py paperwork     # Generate all legal documents
-python launchops.py coach         # ExecAI coaching session
+python launchops.py coach         # Gnosis Coach coaching session
 python launchops.py ip-audit      # IP protection audit
 ```
 
@@ -146,7 +146,7 @@ python launchops.py ip-audit      # IP protection audit
 | `launch` | Run the full 20-stage launch pipeline |
 | `stage <name>` | Run a single pipeline stage |
 | `status` | Show pipeline progress |
-| `coach` | Start an ExecAI coaching session |
+| `coach` | Start an Gnosis Coach coaching session |
 | `funding` | Run funding readiness report |
 | `formation` | Run formation structure optimizer |
 | `paperwork` | Generate all legal documents |
@@ -183,14 +183,14 @@ python launchops.py ip-audit      # IP protection audit
 | 16 | Pricing Strategy | Business Builder | Pricing model and tier structure |
 | 17 | Competitive Analysis | Business Builder | Landscape analysis and positioning |
 | 18 | 90-Day Ops Plan | Business Builder | Week-by-week operational plan |
-| 19 | ExecAI Review | ExecAI Coach | Harvard-style strategic review |
+| 19 | Gnosis Coach Review | Gnosis Coach Coach | Harvard-style strategic review |
 | 20 | Documentary | Documentary Tracker | Generate narrative from all milestones |
 
 ---
 
 ## Agents
 
-### ExecAI Strategic Catalyst
+### Gnosis Coach Strategic Catalyst
 
 Harvard Business School coaching methodology. Provides strategic guidance using:
 
@@ -255,7 +255,7 @@ Every milestone logged. Every AI co-creation moment captured. The documentary wr
 
 | Traditional Stack | LaunchOps Stack | Savings |
 |-------------------|-----------------|---------|
-| MBA Consultant: $5,000+ | ExecAI Coach: $0 | **$5,000** |
+| MBA Consultant: $5,000+ | Gnosis Coach Coach: $0 | **$5,000** |
 | Lawyer (formation + IP): $3,000+ | Paperwork Agent: $0 | **$3,000** |
 | Funding Consultant: $2,000+ | Funding Intelligence: $0 | **$2,000** |
 | SaaS Stack: $12,000/yr | Docker Self-Hosted: $315/yr | **$11,685/yr** |
@@ -275,7 +275,7 @@ Every milestone logged. Every AI co-creation moment captured. The documentary wr
 
 ### Public Edition (Future — Founder Autopilot)
 
-- Trust boundary and permission system (ExecAI governance)
+- Trust boundary and permission system (Gnosis Coach governance)
 - User consent flows for sensitive operations
 - Multi-tenant isolation
 - Audit logging
@@ -340,12 +340,12 @@ python launchops.py deploy
 
 ## Links
 
-- **GitHub**: https://github.com/MicroAIStudios-DAO/launchops-founder-edition
-- **MicroAI Studios**: https://github.com/MicroAIStudios-DAO
+- **GitHub**: https://github.com/GnoscentiStudios-DAO/launchops-founder-edition
+- **Gnoscenti**: https://github.com/GnoscentiStudios-DAO
 - **Founder Autopilot (Public Edition)**: Coming soon
 
 ---
 
-**Built by MicroAI Studios. Co-created with AI.**
+**Built by Gnoscenti. Co-created with AI.**
 
 *AI + Human Co-Creating GREAT Things.*

@@ -1,27 +1,34 @@
 version: '3.8'
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# ATLAS LaunchOps — Complete Open-Source Business Stack
+# Deploy: docker compose up -d
+# Stop:   docker compose down
+# ═══════════════════════════════════════════════════════════════════════════════
+
 services:
-  # Bitwarden - Password Manager
+
+  # ── 1. Password Manager (Vaultwarden / Bitwarden-compatible) ────────────────
   bitwarden:
     image: vaultwarden/server:latest
-    container_name: launchops_bitwarden
+    container_name: atlas_bitwarden
     restart: unless-stopped
     environment:
-      - DOMAIN=https://vault.localhost
-      - SIGNUPS_ALLOWED=true
-      - INVITATIONS_ALLOWED=true
+      - DOMAIN=${BITWARDEN_DOMAIN:-https://vault.localhost}
+      - SIGNUPS_ALLOWED=false
+      - ADMIN_TOKEN=${BITWARDEN_ADMIN_TOKEN}
       - WEBSOCKET_ENABLED=true
     volumes:
       - ./data/bitwarden:/data
     ports:
-      - "8000:80"
+      - "${BITWARDEN_PORT:-8000}:80"
     networks:
-      - launchops_network
+      - atlas_network
 
-  # WordPress - Website & CMS
+  # ── 2. Website & CMS (WordPress) ────────────────────────────────────────────
   wordpress:
     image: wordpress:latest
-    container_name: launchops_wordpress
+    container_name: atlas_wordpress
     restart: unless-stopped
     environment:
       - WORDPRESS_DB_HOST=wordpress_db
@@ -31,15 +38,15 @@ services:
     volumes:
       - ./data/wordpress:/var/www/html
     ports:
-      - "8080:80"
+      - "${WORDPRESS_PORT:-8080}:80"
     networks:
-      - launchops_network
+      - atlas_network
     depends_on:
       - wordpress_db
 
   wordpress_db:
-    image: mariadb:latest
-    container_name: launchops_wordpress_db
+    image: mariadb:10.11
+    container_name: atlas_wordpress_db
     restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=${WORDPRESS_DB_ROOT_PASSWORD}
@@ -49,31 +56,31 @@ services:
     volumes:
       - ./data/wordpress_db:/var/lib/mysql
     networks:
-      - launchops_network
+      - atlas_network
 
-  # Mautic - Marketing Automation
+  # ── 3. Marketing Automation (Mautic) ────────────────────────────────────────
   mautic:
-    image: mautic/mautic:latest
-    container_name: launchops_mautic
+    image: mautic/mautic:5-apache
+    container_name: atlas_mautic
     restart: unless-stopped
     environment:
       - MAUTIC_DB_HOST=mautic_db
       - MAUTIC_DB_NAME=mautic
       - MAUTIC_DB_USER=mautic
       - MAUTIC_DB_PASSWORD=${MAUTIC_DB_PASSWORD}
-      - MAUTIC_TRUSTED_PROXIES=0.0.0.0/0
+      - MAUTIC_TRUSTED_PROXIES=["0.0.0.0/0"]
     volumes:
       - ./data/mautic:/var/www/html
     ports:
-      - "8081:80"
+      - "${MAUTIC_PORT:-8081}:80"
     networks:
-      - launchops_network
+      - atlas_network
     depends_on:
       - mautic_db
 
   mautic_db:
-    image: mariadb:latest
-    container_name: launchops_mautic_db
+    image: mariadb:10.11
+    container_name: atlas_mautic_db
     restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=${MAUTIC_DB_ROOT_PASSWORD}
@@ -83,12 +90,12 @@ services:
     volumes:
       - ./data/mautic_db:/var/lib/mysql
     networks:
-      - launchops_network
+      - atlas_network
 
-  # Nextcloud - File Storage
+  # ── 4. File Storage (Nextcloud) ──────────────────────────────────────────────
   nextcloud:
-    image: nextcloud:latest
-    container_name: launchops_nextcloud
+    image: nextcloud:27-apache
+    container_name: atlas_nextcloud
     restart: unless-stopped
     environment:
       - MYSQL_HOST=nextcloud_db
@@ -97,19 +104,19 @@ services:
       - MYSQL_PASSWORD=${NEXTCLOUD_DB_PASSWORD}
       - NEXTCLOUD_ADMIN_USER=admin
       - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
-      - NEXTCLOUD_TRUSTED_DOMAINS=localhost nextcloud
+      - NEXTCLOUD_TRUSTED_DOMAINS=localhost ${DOMAIN:-localhost}
     volumes:
       - ./data/nextcloud:/var/www/html
     ports:
-      - "8082:80"
+      - "${NEXTCLOUD_PORT:-8082}:80"
     networks:
-      - launchops_network
+      - atlas_network
     depends_on:
       - nextcloud_db
 
   nextcloud_db:
-    image: mariadb:latest
-    container_name: launchops_nextcloud_db
+    image: mariadb:10.11
+    container_name: atlas_nextcloud_db
     restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=${NEXTCLOUD_DB_ROOT_PASSWORD}
@@ -119,33 +126,37 @@ services:
     volumes:
       - ./data/nextcloud_db:/var/lib/mysql
     networks:
-      - launchops_network
+      - atlas_network
 
-  # Chatwoot - Customer Support
+  # ── 5. Customer Support (Chatwoot) ──────────────────────────────────────────
   chatwoot:
     image: chatwoot/chatwoot:latest
-    container_name: launchops_chatwoot
+    container_name: atlas_chatwoot
     restart: unless-stopped
     environment:
+      - SECRET_KEY_BASE=${CHATWOOT_SECRET_KEY}
+      - FRONTEND_URL=http://localhost:${CHATWOOT_PORT:-3001}
+      - DEFAULT_LOCALE=en
+      - RAILS_ENV=production
       - POSTGRES_HOST=chatwoot_db
-      - POSTGRES_DB=chatwoot
-      - POSTGRES_USER=chatwoot
+      - POSTGRES_DATABASE=chatwoot
+      - POSTGRES_USERNAME=chatwoot
       - POSTGRES_PASSWORD=${CHATWOOT_DB_PASSWORD}
       - REDIS_URL=redis://chatwoot_redis:6379
-      - SECRET_KEY_BASE=${CHATWOOT_SECRET_KEY}
     volumes:
-      - ./data/chatwoot:/app/storage
+      - ./data/chatwoot/storage:/app/storage
     ports:
-      - "8083:3000"
+      - "${CHATWOOT_PORT:-3001}:3000"
     networks:
-      - launchops_network
+      - atlas_network
     depends_on:
       - chatwoot_db
       - chatwoot_redis
+    command: bundle exec rails s -p 3000 -b 0.0.0.0
 
   chatwoot_db:
-    image: postgres:14
-    container_name: launchops_chatwoot_db
+    image: postgres:15-alpine
+    container_name: atlas_chatwoot_db
     restart: unless-stopped
     environment:
       - POSTGRES_DB=chatwoot
@@ -154,19 +165,19 @@ services:
     volumes:
       - ./data/chatwoot_db:/var/lib/postgresql/data
     networks:
-      - launchops_network
+      - atlas_network
 
   chatwoot_redis:
-    image: redis:alpine
-    container_name: launchops_chatwoot_redis
+    image: redis:7-alpine
+    container_name: atlas_chatwoot_redis
     restart: unless-stopped
     networks:
-      - launchops_network
+      - atlas_network
 
-  # Matomo - Analytics
+  # ── 6. Analytics (Matomo) ────────────────────────────────────────────────────
   matomo:
     image: matomo:latest
-    container_name: launchops_matomo
+    container_name: atlas_matomo
     restart: unless-stopped
     environment:
       - MATOMO_DATABASE_HOST=matomo_db
@@ -176,15 +187,15 @@ services:
     volumes:
       - ./data/matomo:/var/www/html
     ports:
-      - "8084:80"
+      - "${MATOMO_PORT:-8083}:80"
     networks:
-      - launchops_network
+      - atlas_network
     depends_on:
       - matomo_db
 
   matomo_db:
-    image: mariadb:latest
-    container_name: launchops_matomo_db
+    image: mariadb:10.11
+    container_name: atlas_matomo_db
     restart: unless-stopped
     environment:
       - MYSQL_ROOT_PASSWORD=${MATOMO_DB_ROOT_PASSWORD}
@@ -194,21 +205,61 @@ services:
     volumes:
       - ./data/matomo_db:/var/lib/mysql
     networks:
-      - launchops_network
+      - atlas_network
 
+  # ── 7. Project Management (Taiga) ───────────────────────────────────────────
+  taiga-back:
+    image: taigaio/taiga-back:latest
+    container_name: atlas_taiga_back
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=taiga
+      - POSTGRES_USER=taiga
+      - POSTGRES_PASSWORD=${TAIGA_DB_PASSWORD}
+      - POSTGRES_HOST=taiga_db
+      - TAIGA_SECRET_KEY=${TAIGA_SECRET_KEY}
+      - TAIGA_SITES_DOMAIN=localhost:${TAIGA_PORT:-9000}
+      - TAIGA_SITES_SCHEME=http
+    networks:
+      - atlas_network
+    depends_on:
+      - taiga_db
+      - taiga_redis
+
+  taiga-front:
+    image: taigaio/taiga-front:latest
+    container_name: atlas_taiga_front
+    restart: unless-stopped
+    environment:
+      - TAIGA_URL=http://localhost:${TAIGA_PORT:-9000}
+      - TAIGA_WEBSOCKETS_URL=ws://localhost:${TAIGA_PORT:-9000}
+    ports:
+      - "${TAIGA_PORT:-9000}:80"
+    networks:
+      - atlas_network
+
+  taiga_db:
+    image: postgres:15-alpine
+    container_name: atlas_taiga_db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=taiga
+      - POSTGRES_USER=taiga
+      - POSTGRES_PASSWORD=${TAIGA_DB_PASSWORD}
+    volumes:
+      - ./data/taiga_db:/var/lib/postgresql/data
+    networks:
+      - atlas_network
+
+  taiga_redis:
+    image: redis:7-alpine
+    container_name: atlas_taiga_redis
+    restart: unless-stopped
+    networks:
+      - atlas_network
+
+# ── Shared network ────────────────────────────────────────────────────────────
 networks:
-  launchops_network:
+  atlas_network:
     driver: bridge
-
-volumes:
-  bitwarden_data:
-  wordpress_data:
-  wordpress_db_data:
-  mautic_data:
-  mautic_db_data:
-  nextcloud_data:
-  nextcloud_db_data:
-  chatwoot_data:
-  chatwoot_db_data:
-  matomo_data:
-  matomo_db_data:
+    name: atlas_network

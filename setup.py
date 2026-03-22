@@ -6,7 +6,7 @@ setup(
     name="launchops-founder-edition",
     version="2.0.0",
     description="Build a business like an MBA would. AI + Human Co-Creating GREAT Things.",
-    author="MicroAIStudios",
+    author="GnoscentiStudios",
     python_requires=">=3.10",
     packages=find_packages(),
     install_requires=[

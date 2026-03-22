@@ -24,7 +24,7 @@ The central brain of the system. It manages the state, coordinates agent handoff
 *   **Paralegal Bot:** Automates legal formation, compliance calendars, and document generation.
 *   **Stripe Agent:** Configures payment gateways and financial plumbing.
 *   **Marketing Agent:** Deploys Mautic and executes the "31-Prompt Business Builder" pipeline.
-*   **ExecAI Coach (NEW):** Provides Harvard Dataverse-backed strategic advice and milestone tracking.
+*   **Gnosis Coach Coach (NEW):** Provides Harvard Dataverse-backed strategic advice and milestone tracking.
 *   **Funding Intelligence Agent (NEW):** Analyzes business models against VC, SBIR/STTR grant, and Angel investor criteria.
 
 ---
@@ -59,9 +59,9 @@ Analyzes the startup against key funding avenues:
 
 ---
 
-## 4. ExecAI Coaching & Solopreneur Documentary Pipeline
+## 4. Gnosis Coach Coaching & Solopreneur Documentary Pipeline
 
-### 4.1 ExecAI Coach
+### 4.1 Gnosis Coach Coach
 A background process that monitors progress through the 31-prompt pipeline and infrastructure deployment. It uses frameworks derived from Harvard Business School case studies to provide "courage under uncertainty" advice.
 
 ### 4.2 Documentary Tracker
@@ -72,8 +72,8 @@ A logging mechanism that records key milestones (first commit, first deployment,
 ## 5. Deployment Workflow
 
 1.  **Initialization:** `$ launchops launch --name "My Startup" --type "saas"`
-2.  **Strategy Phase:** ExecAI runs the 31-prompt pipeline to define the business.
+2.  **Strategy Phase:** Gnosis Coach runs the 31-prompt pipeline to define the business.
 3.  **Formation Phase:** Paralegal Bot executes Delaware C-Corp formation and registers for EIN.
 4.  **Infrastructure Phase:** Docker compose spins up Vaultwarden, WordPress, Mautic, etc.
 5.  **Funding Readiness Phase:** Funding Intelligence Agent generates a VC/Grant readiness report.
-6.  **Continuous Coaching:** ExecAI provides weekly strategic reviews.
+6.  **Continuous Coaching:** Gnosis Coach provides weekly strategic reviews.

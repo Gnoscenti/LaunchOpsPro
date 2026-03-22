@@ -1,17 +1,19 @@
-"""LaunchOps Founder Edition — Core"""
+"""
+Gnoscenti Atlas Engine — Core Package
+"""
 
-from .config import get_config, init_config, LaunchOpsConfig
-from .context import SharedContext
-from .credentials import get_vault, CredentialVault
-from .orchestrator import AtlasOrchestrator, STAGES
+from core.config import LaunchOpsConfig
+from core.credentials import CredentialVault
+from core.context import SharedContext
+from core.orchestrator import AtlasOrchestrator
+from core.audit_log import record as audit_record
+from core.workflow_engine import WorkflowEngine
 
 __all__ = [
-    "get_config",
-    "init_config",
     "LaunchOpsConfig",
-    "SharedContext",
-    "get_vault",
     "CredentialVault",
+    "SharedContext",
     "AtlasOrchestrator",
-    "STAGES",
+    "audit_record",
+    "WorkflowEngine",
 ]

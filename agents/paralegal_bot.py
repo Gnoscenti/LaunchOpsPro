@@ -90,7 +90,7 @@ class ParalegalBot(BaseAgent):
         # Simplified - in production, this would query a comprehensive database
         base_requirements = [
             {
-                'item': f'File Articles of {\"Organization\" if entity_type == \"LLC\" else \"Incorporation\"}',
+                'item': f"File Articles of {'Organization' if entity_type == 'LLC' else 'Incorporation'}",
                 'authority': f'{state} Secretary of State',
                 'method': 'Online or mail',
                 'timeline': '1-5 business days'
@@ -177,7 +177,7 @@ class ParalegalBot(BaseAgent):
             {
                 'phase': 'Formation',
                 'tasks': [
-                    {'task': f'File Articles of {\"Organization\" if entity_type == \"LLC\" else \"Incorporation\"}', 'status': 'pending', 'priority': 'high'},
+                    {'task': f"File Articles of {'Organization' if entity_type == 'LLC' else 'Incorporation'}", 'status': 'pending', 'priority': 'high'},
                     {'task': 'Obtain EIN from IRS', 'status': 'pending', 'priority': 'high'},
                     {'task': 'Create Operating Agreement', 'status': 'pending', 'priority': 'high'},
                     {'task': 'File beneficial ownership report (FinCEN)', 'status': 'pending', 'priority': 'high'},
@@ -225,7 +225,7 @@ class ParalegalBot(BaseAgent):
         
         documents = [
             {
-                'name': f'Articles of {\"Organization\" if entity_type == \"LLC\" else \"Incorporation\"}',
+                'name': ("Articles of Organization" if entity_type == "LLC" else "Articles of Incorporation"),
                 'description': 'Legal document to form the business',
                 'template_available': True,
                 'requires_filing': True,

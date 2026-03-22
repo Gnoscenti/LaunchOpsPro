@@ -2,7 +2,7 @@
 LaunchOps Credential Vault
 Fernet-encrypted local credential storage.
 No cloud, no third-party, no guardrails.
-Borrowed and hardened from microai-launchops/core/credentials.py.
+Borrowed and hardened from gnoscenti-launchops/core/credentials.py.
 """
 
 import json
