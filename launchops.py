@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 LaunchOps Founder Edition — CLI Entrypoint
-Build a business like an MBA would. No guardrails. Pure execution.
+The AI-Powered Business Operating System for Founders. No guardrails. Pure execution.
 
 Usage:
   python launchops.py launch          — Run the full launch pipeline
@@ -306,7 +306,7 @@ def cmd_stop(system, args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="LaunchOps Founder Edition - Build a business like an MBA would.",
+        description="LaunchOps Founder Edition - The AI-Powered Business Operating System for Founders.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Commands:
@@ -346,8 +346,8 @@ Commands:
 +--------------------------------------------------------------+
 |                                                              |
 |   LAUNCHOPS FOUNDER EDITION  v2.0                            |
-|   Build a business like an MBA would.                        |
-|   AI + Human Co-Creating GREAT Things.                       |
+|   The AI-Powered Business Operating System for Founders.                        |
+|   The Canonical Integrated Founder-Grade Execution Engine.                       |
 |                                                              |
 |   Tier 3 - No Guardrails - Personal Edition                  |
 |                                                              |

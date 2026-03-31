@@ -1,6 +1,6 @@
 # LaunchOps Founder Edition v2.0
 
-**Build a business like an MBA would. AI + Human Co-Creating GREAT Things.**
+**The AI-Powered Business Operating System for Founders. The Canonical Integrated Founder-Grade Execution Engine.**
 
 LaunchOps Founder Edition is a Tier 3, no-guardrails personal automation engine that launches production-ready businesses with MBA-grade intelligence. It combines an Gnosis Coach coaching layer (Harvard Business School frameworks), a funding intelligence engine (VC, grants, SBIR/STTR, angel), comprehensive IP protection, legal document generation, and a full infrastructure stack — all orchestrated by the Atlas engine.
 
@@ -348,4 +348,10 @@ python launchops.py deploy
 
 **Built by Gnoscenti. Co-created with AI.**
 
-*AI + Human Co-Creating GREAT Things.*
+*The Canonical Integrated Founder-Grade Execution Engine.*
+
+## 🖥️ Operator UI
+LaunchOps now includes a full React/Vite frontend and FastAPI backend for a visual "Command Center" experience.
+- **Backend:** `cd backend && pip install -r requirements.txt && python -m app.main`
+- **Frontend:** `cd frontend && pnpm install && pnpm dev`
+- **URL:** [http://localhost:3000](http://localhost:3000)
