@@ -11,8 +11,12 @@ Success targets: 1000 new YouTube subs/week, 100 new course subs/week
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime, date, timedelta
-from openai import OpenAI
-from app.settings import settings
+import os
+
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
 import json
 
 
@@ -125,12 +129,21 @@ class ContentEngineAgent:
     """Generates 30-day content calendars, fills post templates,
     and tracks content performance via Matomo UTMs."""
 
-    def __init__(self):
-        self.client = OpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_api_base,
-        )
-        self.model = settings.openai_model
+    name = "content_engine"
+
+    def __init__(self, llm_client=None, config=None):
+        if llm_client:
+            self.client = llm_client
+        elif OpenAI:
+            api_key = os.environ.get("OPENAI_API_KEY", "")
+            base_url = os.environ.get("OPENAI_API_BASE", os.environ.get("OPENAI_BASE_URL", ""))
+            kwargs = {"api_key": api_key} if api_key else {}
+            if base_url:
+                kwargs["base_url"] = base_url
+            self.client = OpenAI(**kwargs)
+        else:
+            self.client = None
+        self.model = (config or {}).get("model", os.environ.get("OPENAI_MODEL", "gpt-4.1-mini"))
 
     def generate_30_day_calendar(
         self,

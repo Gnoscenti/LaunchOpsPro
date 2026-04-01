@@ -8,14 +8,34 @@ Rules:
 
 from typing import Dict, Any, Optional, List
 from datetime import datetime, date
-from openai import OpenAI
-from app.settings import settings
 import json
+import os
+
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
+
+
+def _get_openai_client():
+    """Build an OpenAI client from environment or core config."""
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    base_url = os.environ.get("OPENAI_API_BASE", os.environ.get("OPENAI_BASE_URL", ""))
+    kwargs = {"api_key": api_key} if api_key else {}
+    if base_url:
+        kwargs["base_url"] = base_url
+    return OpenAI(**kwargs) if OpenAI else None
+
+
+def _get_model():
+    return os.environ.get("OPENAI_MODEL", "gpt-4.1-mini")
 
 
 class FounderOSAgent:
     """The daily operating system. Produces morning agenda, midday check,
     evening review, and weekly sprint plans."""
+
+    name = "founder_os"
 
     REVENUE_RULE = (
         "Every day MUST include exactly 1 revenue action (close a deal, "
@@ -29,24 +49,27 @@ class FounderOSAgent:
         "current MRR exceeds $20,000/month. Work with what you have."
     )
 
-    def __init__(self):
-        self.client = OpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_api_base,
-        )
-        self.model = settings.openai_model
+    def __init__(self, llm_client=None, config=None):
+        self.client = llm_client or _get_openai_client()
+        self.model = (config or {}).get("model", _get_model())
 
     # ------------------------------------------------------------------
     # Morning Agenda
     # ------------------------------------------------------------------
     def morning_agenda(
         self,
-        current_mrr: float,
-        pipeline_deals: List[Dict[str, Any]],
-        carryover_tasks: List[str],
+        current_mrr: float = 0.0,
+        pipeline_deals: Optional[List[Dict[str, Any]]] = None,
+        carryover_tasks: Optional[List[str]] = None,
         content_metrics: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Generate the morning 'Top 3 Revenue Moves' agenda."""
+        pipeline_deals = pipeline_deals or []
+        carryover_tasks = carryover_tasks or []
+
+        if not self.client:
+            return {"type": "morning_agenda", "date": date.today().isoformat(),
+                    "status": "skipped", "reason": "No LLM client available"}
 
         system_msg = f"""You are Founder OS — a ruthless daily operating system.
 {self.REVENUE_RULE}
@@ -89,11 +112,18 @@ Generate today's morning agenda. Be specific. Name the deal, the dollar amount, 
     # ------------------------------------------------------------------
     def midday_check(
         self,
-        morning_agenda: Dict[str, Any],
-        completed_so_far: List[str],
-        current_blockers: List[str],
+        morning_agenda: Optional[Dict[str, Any]] = None,
+        completed_so_far: Optional[List[str]] = None,
+        current_blockers: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Midday checkpoint: blockers + next immediate step."""
+        morning_agenda = morning_agenda or {}
+        completed_so_far = completed_so_far or []
+        current_blockers = current_blockers or []
+
+        if not self.client:
+            return {"type": "midday_check", "date": date.today().isoformat(),
+                    "status": "skipped", "reason": "No LLM client available"}
 
         system_msg = f"""You are Founder OS performing a midday check.
 {self.REVENUE_RULE}
@@ -131,12 +161,18 @@ Current blockers: {json.dumps(current_blockers)}"""
     # ------------------------------------------------------------------
     def evening_review(
         self,
-        morning_agenda: Dict[str, Any],
-        completed_tasks: List[str],
-        proof_artifact_url: Optional[str],
+        morning_agenda: Optional[Dict[str, Any]] = None,
+        completed_tasks: Optional[List[str]] = None,
+        proof_artifact_url: Optional[str] = None,
         revenue_collected: float = 0.0,
     ) -> Dict[str, Any]:
         """Evening review: wins, misses, carryover."""
+        morning_agenda = morning_agenda or {}
+        completed_tasks = completed_tasks or []
+
+        if not self.client:
+            return {"type": "evening_review", "date": date.today().isoformat(),
+                    "status": "skipped", "reason": "No LLM client available"}
 
         system_msg = f"""You are Founder OS performing an evening review.
 {self.REVENUE_RULE}
@@ -179,12 +215,19 @@ Revenue collected today: ${revenue_collected:,.2f}"""
     # ------------------------------------------------------------------
     def weekly_sprint_plan(
         self,
-        current_mrr: float,
-        last_week_reviews: List[Dict[str, Any]],
-        pipeline_deals: List[Dict[str, Any]],
-        content_performance: Dict[str, Any],
+        current_mrr: float = 0.0,
+        last_week_reviews: Optional[List[Dict[str, Any]]] = None,
+        pipeline_deals: Optional[List[Dict[str, Any]]] = None,
+        content_performance: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """Generate the weekly sprint plan for the upcoming week."""
+        last_week_reviews = last_week_reviews or []
+        pipeline_deals = pipeline_deals or []
+        content_performance = content_performance or {}
+
+        if not self.client:
+            return {"type": "weekly_sprint_plan", "week_starting": date.today().isoformat(),
+                    "status": "skipped", "reason": "No LLM client available"}
 
         system_msg = f"""You are Founder OS generating a weekly sprint plan.
 {self.REVENUE_RULE}

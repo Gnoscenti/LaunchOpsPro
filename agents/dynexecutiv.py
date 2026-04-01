@@ -9,22 +9,34 @@ Pulls live data from Stripe, SuiteCRM, and Matomo to produce:
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime, date, timedelta
-from openai import OpenAI
-from app.settings import settings
 import json
+import os
 import requests
+
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
+
+
+def _get_openai_client():
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    base_url = os.environ.get("OPENAI_API_BASE", os.environ.get("OPENAI_BASE_URL", ""))
+    kwargs = {"api_key": api_key} if api_key else {}
+    if base_url:
+        kwargs["base_url"] = base_url
+    return OpenAI(**kwargs) if OpenAI else None
 
 
 class DynExecutivAgent:
     """Decision engine that synthesizes CRM, revenue, and content data
     into actionable daily and weekly directives."""
 
-    def __init__(self):
-        self.client = OpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_api_base,
-        )
-        self.model = settings.openai_model
+    name = "dynexecutiv"
+
+    def __init__(self, llm_client=None, config=None):
+        self.client = llm_client or _get_openai_client()
+        self.model = (config or {}).get("model", os.environ.get("OPENAI_MODEL", "gpt-4.1-mini"))
 
     # ==================================================================
     # DATA CONNECTORS
@@ -34,9 +46,7 @@ class DynExecutivAgent:
         """Pull live revenue data from Stripe."""
         try:
             import stripe
-            from app.core.vault import get_stripe_key
-
-            stripe.api_key = get_stripe_key()
+            stripe.api_key = os.environ.get("STRIPE_SECRET_KEY", "")
             if not stripe.api_key:
                 return {"error": "Stripe key not configured", "mrr": 0}
 

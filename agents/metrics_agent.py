@@ -7,14 +7,17 @@ Rule:   If it doesn't increase revenue or reduce cost -> cut it.
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime, date, timedelta
-from openai import OpenAI
-from app.settings import settings
 import json
 import sqlite3
 import os
 
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
 
-DB_PATH = os.path.join(settings.artifacts_path, "metrics.db")
+
+DB_PATH = os.path.join(os.environ.get("ARTIFACTS_PATH", "./data/artifacts"), "metrics.db")
 
 
 class MetricsStore:
@@ -116,12 +119,21 @@ class MetricsStore:
 class MetricsAgent:
     """Enforces the metrics framework with real data and automated cut rules."""
 
-    def __init__(self):
-        self.client = OpenAI(
-            api_key=settings.openai_api_key,
-            base_url=settings.openai_api_base,
-        )
-        self.model = settings.openai_model
+    name = "metrics_agent"
+
+    def __init__(self, llm_client=None, config=None):
+        if llm_client:
+            self.client = llm_client
+        elif OpenAI:
+            api_key = os.environ.get("OPENAI_API_KEY", "")
+            base_url = os.environ.get("OPENAI_API_BASE", os.environ.get("OPENAI_BASE_URL", ""))
+            kwargs = {"api_key": api_key} if api_key else {}
+            if base_url:
+                kwargs["base_url"] = base_url
+            self.client = OpenAI(**kwargs)
+        else:
+            self.client = None
+        self.model = (config or {}).get("model", os.environ.get("OPENAI_MODEL", "gpt-4.1-mini"))
         self.store = MetricsStore()
 
     # ------------------------------------------------------------------

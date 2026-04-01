@@ -37,6 +37,7 @@ from core.context import SharedContext
 from core.orchestrator import AtlasOrchestrator
 from tools.llm_client import LLMClient
 from workflows.launch_pipeline import LaunchPipeline
+from core.stage_handlers import register_all_handlers
 
 # Agents
 from agents.execai_coach import ExecAICoach
@@ -71,30 +72,42 @@ def build_system(config_path: str = None) -> dict:
         "security_agent": SecurityAgent(llm_client=llm, config=cfg),
     }
 
-    # Try to load optional infrastructure agents
-    try:
-        from agents.wordpress_agent import WordPressAgent
-        agents["wordpress_agent"] = WordPressAgent(llm_client=llm, config=cfg)
-    except Exception:
-        pass
+    # Load optional infrastructure agents
+    optional_agents = {
+        "wordpress_agent": "agents.wordpress_agent.WordPressAgent",
+        "stripe_agent": "agents.stripe_agent.StripeAgent",
+        "mautic_agent": "agents.mautic_agent.MauticAgent",
+        "paralegal_bot": "agents.paralegal_bot.ParalegalBot",
+        "growth_agent": "agents.growth_agent.GrowthAgent",
+        "analytics_agent": "agents.analytics_agent.AnalyticsAgent",
+        "email_agent": "agents.email_agent.EmailAgent",
+    }
+    for agent_name, module_path in optional_agents.items():
+        try:
+            module_name, class_name = module_path.rsplit(".", 1)
+            import importlib
+            mod = importlib.import_module(module_name)
+            cls = getattr(mod, class_name)
+            agents[agent_name] = cls(llm_client=llm, config=cfg)
+        except Exception:
+            pass
 
-    try:
-        from agents.stripe_agent import StripeAgent
-        agents["stripe_agent"] = StripeAgent(llm_client=llm, config=cfg)
-    except Exception:
-        pass
-
-    try:
-        from agents.mautic_agent import MauticAgent
-        agents["mautic_agent"] = MauticAgent(llm_client=llm, config=cfg)
-    except Exception:
-        pass
-
-    try:
-        from agents.paralegal_bot import ParalegalBot
-        agents["paralegal_bot"] = ParalegalBot(llm_client=llm, config=cfg)
-    except Exception:
-        pass
+    # Load new pipeline agents (Founder OS, DynExecutiv, Content Engine, Metrics)
+    new_agents = {
+        "founder_os": "agents.founder_os.FounderOSAgent",
+        "dynexecutiv": "agents.dynexecutiv.DynExecutivAgent",
+        "content_engine": "agents.content_engine.ContentEngineAgent",
+        "metrics_agent": "agents.metrics_agent.MetricsAgent",
+    }
+    for agent_name, module_path in new_agents.items():
+        try:
+            module_name, class_name = module_path.rsplit(".", 1)
+            import importlib
+            mod = importlib.import_module(module_name)
+            cls = getattr(mod, class_name)
+            agents[agent_name] = cls(llm_client=llm, config=cfg)
+        except Exception:
+            pass
 
     # Initialize orchestrator
     orchestrator = AtlasOrchestrator()
@@ -102,6 +115,9 @@ def build_system(config_path: str = None) -> dict:
     # Register all agents with the orchestrator
     for name, agent in agents.items():
         orchestrator.register_agent(name, agent)
+
+    # Wire agents as real stage handlers (THE CRITICAL FIX)
+    register_all_handlers(orchestrator, agents)
 
     # Initialize pipeline
     pipeline = LaunchPipeline(orchestrator)
