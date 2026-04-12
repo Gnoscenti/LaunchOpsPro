@@ -19,6 +19,11 @@ Endpoints:
     GET  /atlas/runs                → Execution history
     POST /atlas/reset               → Reset pipeline state
 
+    [Phase 2 — Governed Execution]
+    GET  /atlas/v2/status           → ProofGuard governance configuration
+    POST /atlas/v2/execute          → Execute pipeline with ProofGuard + HITL (SSE)
+    POST /atlas/v2/execute/stage    → Governed single-stage execution
+
     GET  /atlas/context             → Full shared context dump
     GET  /atlas/context/{key}       → Dot-notation key lookup
     GET  /atlas/logs                → Audit log
@@ -48,7 +53,17 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from api.routes import health, pipeline, config, artifacts, services
+from api.routes import (
+    health,
+    pipeline,
+    config,
+    artifacts,
+    services,
+    execute_v2,
+    dynexecutiv,
+    mcp as mcp_routes,
+    command_center,
+)
 
 app = FastAPI(
     title="LaunchOps Founder Edition",
@@ -66,7 +81,11 @@ app.add_middleware(
 
 # ── Mount route modules ─────────────────────────────────────────────────
 app.include_router(health.router)
-app.include_router(pipeline.router)
+app.include_router(pipeline.router)           # Phase 1 sync /atlas/execute
+app.include_router(execute_v2.router)         # Phase 2 governed /atlas/v2/execute + /hitl
+app.include_router(dynexecutiv.router)        # Phase 3 Generative UI stream
+app.include_router(mcp_routes.router)         # Phase 4 /mcp/discover + /mcp/invoke
+app.include_router(command_center.router)    # Gnoscenti Command Center /api/v1/*
 app.include_router(config.router)
 app.include_router(artifacts.router)
 app.include_router(services.router)

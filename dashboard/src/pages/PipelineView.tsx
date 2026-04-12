@@ -9,8 +9,19 @@ import {
   Clock,
   Loader2,
   ArrowRight,
+  Shield,
+  Sparkles,
+  Zap,
 } from 'lucide-react'
-import { getStages, executeStage, executePipeline, resetPipeline } from '../lib/api'
+import {
+  getStages,
+  executeStage,
+  executePipeline,
+  executeGovernedPipeline,
+  resetPipeline,
+} from '../lib/api'
+import GenerativeUIRenderer from '../components/generative/GenerativeUIRenderer'
+import type { UIComponentPayload } from '../lib/componentRegistry'
 
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
@@ -31,25 +42,49 @@ export default function PipelineView() {
   const queryClient = useQueryClient()
   const stages = useQuery({ queryKey: ['stages'], queryFn: getStages })
   const [running, setRunning] = useState(false)
+  const [governed, setGoverned] = useState(false)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [events, setEvents] = useState<Array<{ event: string; data: any; time: string }>>([])
+  const [uiPayloads, setUIPayloads] = useState<UIComponentPayload[]>([])
   const [executingStage, setExecutingStage] = useState<string | null>(null)
 
   const stageData = stages.data?.stages || []
 
-  const handleLaunchAll = () => {
+  const consumeEvents = (runner: typeof executePipeline) => {
     setRunning(true)
     setEvents([])
-    executePipeline((event, data) => {
+    setUIPayloads([])
+    runner((event, data) => {
       setEvents((prev) => [...prev, { event, data, time: new Date().toLocaleTimeString() }])
+
+      // Phase 3: buffer ui_component payloads for inline rendering
+      if (event === 'ui_component' && data && typeof data === 'object') {
+        setUIPayloads((prev) => [...prev, data as UIComponentPayload])
+      }
+
       if (event === 'stage_complete' || event === 'stage_error') {
         queryClient.invalidateQueries({ queryKey: ['stages'] })
       }
-      if (event === 'pipeline_complete') {
+      if (
+        event === 'pipeline_complete' ||
+        event === 'pipeline_error' ||
+        event === 'governance_halt'
+      ) {
         setRunning(false)
         queryClient.invalidateQueries({ queryKey: ['stages'] })
         queryClient.invalidateQueries({ queryKey: ['runs'] })
       }
     })
+  }
+
+  const handleLaunchAll = () => {
+    setGoverned(false)
+    consumeEvents(executePipeline)
+  }
+
+  const handleLaunchGoverned = () => {
+    setGoverned(true)
+    consumeEvents(executeGovernedPipeline)
   }
 
   const handleRunStage = async (stageName: string) => {
@@ -93,10 +128,18 @@ export default function PipelineView() {
           <button
             onClick={handleLaunchAll}
             disabled={running}
-            className="flex items-center gap-2 px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 disabled:opacity-50 font-medium text-sm"
+            className="flex items-center gap-2 px-5 py-2 bg-gray-800 text-gray-200 border border-gray-700 rounded-lg hover:bg-gray-700 disabled:opacity-50 font-medium text-sm"
           >
-            {running ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
-            {running ? 'Running...' : 'Launch All'}
+            {running && !governed ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+            Launch (Phase 1)
+          </button>
+          <button
+            onClick={handleLaunchGoverned}
+            disabled={running}
+            className="flex items-center gap-2 px-5 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-500 disabled:opacity-50 font-medium text-sm"
+          >
+            {running && governed ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} />}
+            {running && governed ? 'Governing...' : 'Launch (Governed)'}
           </button>
         </div>
       </div>
@@ -140,27 +183,47 @@ export default function PipelineView() {
         ))}
       </div>
 
+      {/* Phase 3: Inline Generative UI payloads */}
+      {uiPayloads.length > 0 && (
+        <div className="space-y-4">
+          <h3 className="font-semibold text-gray-200 flex items-center gap-2">
+            <Sparkles size={16} className="text-emerald-400" />
+            Live Agent Output
+            <span className="text-xs text-gray-500 font-normal">
+              ({uiPayloads.length} widgets)
+            </span>
+          </h3>
+          <div className="space-y-3">
+            {uiPayloads.map((payload) => (
+              <GenerativeUIRenderer
+                key={payload.id || `${payload.component}-${payload.timestamp}`}
+                payload={payload}
+                showAttribution
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Event feed */}
       {events.length > 0 && (
         <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <h3 className="font-semibold text-gray-200 mb-3">Execution Events</h3>
-          <div className="space-y-1 max-h-64 overflow-y-auto font-mono text-xs">
+          <h3 className="font-semibold text-gray-200 mb-3 flex items-center gap-2">
+            <Zap size={16} className="text-amber-400" />
+            Execution Events
+            <span className="text-xs text-gray-500 font-normal">
+              ({events.length})
+            </span>
+          </h3>
+          <div className="space-y-1 max-h-80 overflow-y-auto font-mono text-xs">
             {events.map((e, i) => (
               <div key={i} className="flex gap-3 py-1 border-b border-gray-800/50">
                 <span className="text-gray-600 w-20 shrink-0">{e.time}</span>
-                <span
-                  className={`w-28 shrink-0 ${
-                    e.event.includes('error')
-                      ? 'text-red-400'
-                      : e.event.includes('complete')
-                      ? 'text-emerald-400'
-                      : 'text-amber-400'
-                  }`}
-                >
+                <span className={`w-36 shrink-0 ${eventColor(e.event)}`}>
                   {e.event}
                 </span>
                 <span className="text-gray-400 truncate">
-                  {e.data.stage || e.data.run_id || JSON.stringify(e.data).slice(0, 80)}
+                  {eventSummary(e.event, e.data)}
                 </span>
               </div>
             ))}
@@ -169,4 +232,37 @@ export default function PipelineView() {
       )}
     </div>
   )
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function eventColor(event: string): string {
+  if (event.includes('error') || event === 'governance_halt') return 'text-red-400'
+  if (event.includes('complete') || event === 'hitl_resumed') return 'text-emerald-400'
+  if (event === 'proofguard_verdict') return 'text-purple-400'
+  if (event === 'hitl_waiting') return 'text-amber-400'
+  if (event === 'ui_component') return 'text-sky-400'
+  if (event === 'agent_propose') return 'text-blue-400'
+  if (event === 'agent_executing' || event === 'agent_result') return 'text-teal-400'
+  return 'text-amber-400'
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function eventSummary(event: string, data: any): string {
+  if (!data || typeof data !== 'object') return String(data ?? '')
+  if (event === 'proofguard_verdict') {
+    return `${data.agent || '?'} → ${data.status} (CQS ${data.cqs_score ?? '?'})`
+  }
+  if (event === 'agent_propose') {
+    return `${data.agent || '?'} drafting plan @ ${data.stage || '?'}`
+  }
+  if (event === 'agent_result') {
+    return `${data.agent || '?'} → ${data.status || '?'}: ${String(data.summary || '').slice(0, 60)}`
+  }
+  if (event === 'ui_component') {
+    return `${data.component || '?'} from ${data.source_agent || '?'}`
+  }
+  if (event === 'hitl_waiting') {
+    return `${data.agent || '?'} awaiting approval (${data.attestation_id || '?'})`
+  }
+  return data.stage || data.run_id || JSON.stringify(data).slice(0, 80)
 }

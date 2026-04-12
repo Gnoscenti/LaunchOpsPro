@@ -4,7 +4,7 @@ Evaluates growth readiness and generates a structured GTM strategy.
 Blocked by Atlas governance until billing and analytics are validated.
 """
 from __future__ import annotations
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from agents.base import BaseAgent
 
 
@@ -50,6 +50,58 @@ GROWTH_METRICS = {
 class GrowthAgent(BaseAgent):
     def __init__(self, llm_client=None, config=None):
         super().__init__("Growth", llm_client, config)
+
+    # ── Phase 2: propose_plan for ProofGuard attestation ────────────────
+
+    async def propose_plan(
+        self, task_payload: Dict[str, Any], context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Classify the proposed growth action. GrowthAgent is 99% read-only
+        (it synthesizes strategies via LLM) but can bump to medium-risk
+        when it touches live content distribution channels.
+
+        IMDA pillar: "User Enablement" — growth outputs are directly
+        founder-facing strategic recommendations.
+        """
+        task_type = task_payload.get("type", "growth_strategy")
+
+        # Channel-pushing actions that modify external state
+        write_actions = {
+            "publish_content",
+            "launch_campaign",
+            "deploy_abandoned_cart",
+        }
+
+        if task_type in write_actions:
+            risk_tier = "medium"
+            side_effects = "external_channel_write"
+            reversibility = "reversible (pause campaign)"
+        else:
+            risk_tier = "low"
+            side_effects = "llm_only"
+            reversibility = "n/a"
+
+        business_type = task_payload.get("business_type", "saas")
+
+        return {
+            "agent": self.name,
+            "intended_action": task_type,
+            "risk_tier": risk_tier,
+            "imda_pillar": "User Enablement",
+            "business_type": business_type,
+            "target_channels": CHANNEL_MATRIX.get(business_type, {}).get("primary", []),
+            "side_effects": side_effects,
+            "reversibility": reversibility,
+            "rationale": (
+                f"growth_agent will run {task_type} for a {business_type} business; "
+                + (
+                    "output is a strategy document only — no external writes."
+                    if task_type not in write_actions
+                    else "this writes to external marketing channels."
+                )
+            ),
+        }
 
     def analyze(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self.log_info("Generating growth strategy...")

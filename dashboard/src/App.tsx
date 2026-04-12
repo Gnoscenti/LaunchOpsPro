@@ -10,6 +10,7 @@ import {
   BookOpen,
   ScrollText,
   History,
+  Sparkles,
 } from 'lucide-react'
 
 import Dashboard from './pages/Dashboard'
@@ -21,6 +22,7 @@ import Logs from './pages/Logs'
 import Prompts from './pages/Prompts'
 import Permissions from './pages/Permissions'
 import Runs from './pages/Runs'
+import DailyBrief from './pages/DailyBrief'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchInterval: 5000 } },
@@ -29,6 +31,7 @@ const queryClient = new QueryClient({
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/pipeline', icon: Rocket, label: 'Pipeline' },
+  { to: '/brief', icon: Sparkles, label: 'Daily Brief' },
   { to: '/services', icon: Server, label: 'Services' },
   { to: '/artifacts', icon: FileText, label: 'Artifacts' },
   { to: '/agents', icon: Activity, label: 'Agents' },
@@ -66,9 +69,13 @@ function App() {
             <div className="p-4 border-b border-gray-800">
               <h1 className="text-lg font-bold text-emerald-400 flex items-center gap-2">
                 <Rocket size={20} />
-                LaunchOps
+                Dynexis
               </h1>
-              <p className="text-xs text-gray-500 mt-1">Founder Edition v3.0</p>
+              <p className="text-[11px] text-gray-500 mt-1 leading-tight">
+                LaunchOps / DynExecutiv
+                <br />
+                Founder OS / Metrics
+              </p>
             </div>
             <nav className="flex-1 p-3 space-y-1">
               {NAV_ITEMS.map((item) => (
@@ -76,8 +83,10 @@ function App() {
               ))}
             </nav>
             <div className="p-3 border-t border-gray-800">
-              <div className="text-xs text-gray-600 text-center">
-                Tier 3 — No Guardrails
+              <div className="text-[10px] text-gray-600 text-center leading-tight">
+                Deploy in hours. Run with zero drift.
+                <br />
+                Cut what doesn't pay.
               </div>
             </div>
           </aside>
@@ -88,6 +97,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/pipeline" element={<PipelineView />} />
+                <Route path="/brief" element={<DailyBrief />} />
                 <Route path="/services" element={<Services />} />
                 <Route path="/artifacts" element={<Artifacts />} />
                 <Route path="/agents" element={<Agents />} />

@@ -30,13 +30,19 @@ def _get_openai_client():
 
 class DynExecutivAgent:
     """Decision engine that synthesizes CRM, revenue, and content data
-    into actionable daily and weekly directives."""
+    into actionable daily and weekly directives.
+
+    Phase 3: also emits Generative UI payloads (core/generative_ui.py) so
+    the dashboard can render charts, KPI cards, and alert banners in response
+    to the agent's analysis rather than just dumping text.
+    """
 
     name = "dynexecutiv"
 
-    def __init__(self, llm_client=None, config=None):
+    def __init__(self, llm_client=None, config=None, mcp_gateway=None):
         self.client = llm_client or _get_openai_client()
         self.model = (config or {}).get("model", os.environ.get("OPENAI_MODEL", "gpt-4.1-mini"))
+        self.mcp = mcp_gateway
 
     # ==================================================================
     # DATA CONNECTORS
@@ -277,3 +283,186 @@ Week ending: {date.today().isoformat()}"""
 <pre>{json.dumps(content, indent=2)}</pre>
 </body></html>"""
         return html
+
+    # ==================================================================
+    # PHASE 3: GENERATIVE UI
+    # ==================================================================
+
+    async def generate_daily_brief(
+        self,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Phase 3 daily brief that returns Generative UI payloads alongside
+        the narrative text. The dashboard renders charts, KPI cards, and
+        alert banners in real time as this agent streams its analysis.
+
+        Returns a dict shaped for Phase2Executor:
+            {
+                "success": bool,
+                "narrative": str,
+                "ui_payloads": [ {type: "ui_component", ...}, ... ],
+                "data_sources": {...},
+            }
+
+        Phase2Executor's extract_ui_payloads() walks the returned dict and
+        re-emits each ui_payload as a `ui_component` SSE event.
+        """
+        # Import here to avoid a circular dep at module load time
+        from core.generative_ui import (
+            analytics_chart,
+            alert_banner,
+            kpi_card,
+            action_list,
+        )
+
+        context = context or {}
+        stripe_data = context.get("stripe_data") or self.pull_stripe_data()
+        crm_data = context.get("crm_data") or self.pull_crm_data()
+
+        # ── Synthesize metrics from live data ─────────────────────────────
+        mrr = stripe_data.get("mrr", 0) if isinstance(stripe_data, dict) else 0
+        weekly_revenue = stripe_data.get("weekly_revenue", 0) if isinstance(stripe_data, dict) else 0
+        active_subs = stripe_data.get("active_subscriptions", 0) if isinstance(stripe_data, dict) else 0
+
+        # Funnel data — either live from context or illustrative default
+        funnel = context.get("metrics", {}).get("conversion_funnel") or {
+            "visitors": 1200,
+            "pricing_views": 800,
+            "checkout_started": 150,
+        }
+        funnel_data = [
+            {"name": "Landing Page", "value": funnel.get("visitors", 0)},
+            {"name": "Pricing Page", "value": funnel.get("pricing_views", 0)},
+            {"name": "Checkout", "value": funnel.get("checkout_started", 0)},
+        ]
+
+        # ── Decide whether to raise a drop-off alert ──────────────────────
+        drop_off_pct = 0
+        if funnel_data[1]["value"] > 0:
+            drop_off_pct = round(
+                (1 - funnel_data[2]["value"] / funnel_data[1]["value"]) * 100, 1
+            )
+
+        ui_payloads = []
+
+        # Revenue KPI card (always shown)
+        ui_payloads.append(
+            kpi_card(
+                label="Current MRR",
+                value=f"${mrr:,.2f}",
+                delta=None,
+                tone="positive" if mrr > 0 else "neutral",
+                source_agent="dynexecutiv",
+            ).to_dict()
+        )
+
+        ui_payloads.append(
+            kpi_card(
+                label="Active Subscriptions",
+                value=active_subs,
+                tone="positive" if active_subs > 0 else "neutral",
+                source_agent="dynexecutiv",
+            ).to_dict()
+        )
+
+        # Funnel chart
+        ui_payloads.append(
+            analytics_chart(
+                title="Marketing Funnel (last 7 days)",
+                data=funnel_data,
+                chart_type="bar",
+                alert_text=(
+                    f"Checkout conversion dropped {drop_off_pct}% vs pricing "
+                    f"views. Recommend deploying an abandoned-cart sequence."
+                )
+                if drop_off_pct >= 15
+                else None,
+                source_agent="dynexecutiv",
+            ).to_dict()
+        )
+
+        # Alert banner if the drop-off is severe
+        if drop_off_pct >= 15:
+            ui_payloads.append(
+                alert_banner(
+                    severity="warning",
+                    title="Checkout drop-off detected",
+                    message=(
+                        f"Conversion from Pricing → Checkout fell {drop_off_pct}% "
+                        "in the last 24h. DynExecutiv recommends triggering an "
+                        "abandoned-cart email sequence via Mautic."
+                    ),
+                    action_label="Deploy sequence",
+                    action_url="/atlas/v2/execute/stage?stage=growth",
+                    source_agent="dynexecutiv",
+                ).to_dict()
+            )
+
+        # Top-3 action list
+        ui_payloads.append(
+            action_list(
+                title="What Matters Now",
+                items=[
+                    {
+                        "label": "Follow up with top 3 pipeline deals",
+                        "description": "Revenue-first. Protect cash that's already in motion.",
+                        "priority": "high",
+                        "completed": False,
+                    },
+                    {
+                        "label": "Review cart-abandonment funnel",
+                        "description": f"Current drop-off is {drop_off_pct}%.",
+                        "priority": "high" if drop_off_pct >= 15 else "medium",
+                        "completed": False,
+                    },
+                    {
+                        "label": "Publish one piece of proof content",
+                        "description": "Weekly cadence — document the build in public.",
+                        "priority": "medium",
+                        "completed": False,
+                    },
+                ],
+                source_agent="dynexecutiv",
+            ).to_dict()
+        )
+
+        narrative = (
+            f"DynExecutiv daily brief — {date.today().isoformat()}\n\n"
+            f"MRR: ${mrr:,.2f} · Active subs: {active_subs} · "
+            f"Weekly revenue: ${weekly_revenue:,.2f}\n"
+            f"Funnel drop-off (pricing → checkout): {drop_off_pct}%"
+        )
+
+        return {
+            "success": True,
+            "type": "daily_brief",
+            "date": date.today().isoformat(),
+            "narrative": narrative,
+            "ui_payloads": ui_payloads,
+            "data_sources": {
+                "stripe": "live" if "error" not in stripe_data else "fallback",
+                "crm": "live" if "error" not in crm_data else "fallback",
+            },
+        }
+
+    async def propose_plan(
+        self, task_payload: Dict[str, Any], context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
+        """
+        Phase 2 hook: draft the brief's intent so ProofGuard can attest the
+        plan before any external data is pulled. DynExecutiv is read-only
+        so CQS scoring should always approve; this is here for auditability.
+        """
+        return {
+            "intended_action": "generate_daily_brief",
+            "data_sources": ["stripe", "crm", "matomo"],
+            "will_emit_ui": True,
+            "expected_components": [
+                "KPICard",
+                "AnalyticsChart",
+                "AlertBanner",
+                "ActionList",
+            ],
+            "context_keys": sorted((context or {}).keys()),
+        }

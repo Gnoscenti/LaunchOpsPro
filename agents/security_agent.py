@@ -32,6 +32,76 @@ class SecurityAgent(BaseAgent):
             config=config or {},
         )
 
+    # ── Phase 2: propose_plan for ProofGuard attestation ────────────────
+
+    async def propose_plan(
+        self, task_payload: Dict, context: Optional[Dict] = None
+    ) -> Dict:
+        """
+        Classify the proposed security action so ProofGuard can make an
+        informed attestation decision. SecurityAgent is unique in that it
+        spans BOTH ends of the risk spectrum:
+
+          read-only:  audit, generate_passwords (in-memory only)
+          high-risk:  harden, setup_ssl, setup_firewall, deploy_bitwarden,
+                      setup_2fa, full_security_setup — all of these run
+                      sudo shell commands that modify system state
+
+        IMDA pillar: "Technical Robustness" for read-only, bumped to
+        "Internal Governance" when hardening production systems.
+        """
+        task_type = task_payload.get("type", "audit")
+
+        read_only = {"audit", "generate_passwords"}
+        host_modifying = {
+            "harden",
+            "setup_ssl",
+            "setup_firewall",
+            "setup_2fa",
+            "full_security_setup",
+        }
+        deployment = {"deploy_bitwarden"}
+
+        if task_type in read_only:
+            risk_tier = "low"
+            imda_pillar = "Technical Robustness"
+            side_effects = "read_only"
+            reversibility = "n/a"
+        elif task_type in deployment:
+            risk_tier = "medium"
+            imda_pillar = "Technical Robustness"
+            side_effects = "docker_container_start"
+            reversibility = "reversible (docker compose down)"
+        elif task_type in host_modifying:
+            risk_tier = "high"
+            imda_pillar = "Internal Governance"
+            side_effects = "system_configuration_write"
+            reversibility = "partially reversible (manual rollback)"
+        else:
+            risk_tier = "medium"
+            imda_pillar = "Technical Robustness"
+            side_effects = "unknown"
+            reversibility = "unknown"
+
+        return {
+            "agent": self.name,
+            "intended_action": task_type,
+            "risk_tier": risk_tier,
+            "imda_pillar": imda_pillar,
+            "target": task_payload.get("domain") or "localhost",
+            "side_effects": side_effects,
+            "reversibility": reversibility,
+            "requires_sudo": task_type in host_modifying,
+            "rationale": (
+                f"security_agent will execute {task_type}; "
+                + (
+                    "this is a read-only inspection of current config."
+                    if task_type in read_only
+                    else "this action writes to system-level configuration and requires elevated trust."
+                )
+            ),
+        }
+
     def analyze(self, context: Dict) -> Dict:
         domain = context.get("domain", "")
         team_size = context.get("team_size", 1)

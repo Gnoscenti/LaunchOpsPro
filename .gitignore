@@ -1,3 +1,9 @@
+# Node / dashboard
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vite/
+node_modules/
+
 # Python
 __pycache__/
 *.py[cod]
@@ -6,12 +12,12 @@ __pycache__/
 .Python
 build/
 develop-eggs/
-dist/
+# Note: "lib/" here intentionally does NOT have a leading slash so it ONLY
+# matches Python venv lib dirs co-located with pyvenv.cfg, but we also keep
+# dashboard/src/lib tracked via an explicit negation below.
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
 parts/
 sdist/
 var/

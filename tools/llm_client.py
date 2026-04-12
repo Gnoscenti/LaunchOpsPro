@@ -173,3 +173,22 @@ No markdown, no explanation, no code fences. ONLY the JSON object."""
             status["anthropic"] = {"available": False, "error": "No API key"}
 
         return status
+
+
+# ── Phase 2 re-export ───────────────────────────────────────────────────────
+# MCPGateway lives in core/mcp_gateway.py but is re-exported here so
+# agents can write `from tools.llm_client import MCPGateway` alongside
+# their existing LLMClient import. The re-export is defensive: if
+# something in the MCP module fails to load we don't take down the
+# LLMClient import.
+
+try:
+    from core.mcp_gateway import MCPGateway, ToolDefinition  # noqa: E402,F401
+except Exception as _mcp_import_error:  # pragma: no cover
+    MCPGateway = None  # type: ignore
+    ToolDefinition = None  # type: ignore
+    import logging as _logging
+
+    _logging.getLogger("launchops.llm_client").warning(
+        "MCPGateway unavailable: %s", _mcp_import_error
+    )

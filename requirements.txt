@@ -28,6 +28,11 @@ PyGithub>=2.1.1
 openai>=1.30.0
 anthropic>=0.25.0
 
+# Model Context Protocol (optional — core/mcp_gateway.py has a graceful
+# fallback shim, but installing the real SDK enables native agent-to-agent
+# discovery via /mcp/discover)
+mcp>=1.0.0
+
 # Documents and templates
 jinja2>=3.1.0
 markdown>=3.6.0

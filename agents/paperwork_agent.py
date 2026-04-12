@@ -182,6 +182,68 @@ class PaperworkAgent(BaseAgent):
             config=config or {},
         )
         self.docs_dir = os.path.expanduser("~/.launchops/legal_docs")
+
+    # ── Phase 2: propose_plan for ProofGuard attestation ────────────────
+
+    async def propose_plan(
+        self, task_payload: Dict, context: Optional[Dict] = None
+    ) -> Dict:
+        """
+        Draft the intended document-generation action so ProofGuard can
+        attest it before the LLM fires. Paperwork is read-only from an
+        infra perspective (no network writes, no credentials) but HIGH
+        sensitivity because it produces legally binding artifacts that
+        might include PII of the founder or company.
+
+        Risk classification:
+          low:       boilerplate templates (NDA, contractor agreement)
+          medium:    formation docs (Operating Agreement, Articles, Bylaws)
+          high:      IP assignment, 83(b), SAFE — involve real equity/tax
+                     consequences
+
+        IMDA pillar: "Human Accountability" — a human must sign the output.
+        """
+        task_type = task_payload.get("type", "generate_document")
+        doc_id = task_payload.get("document_id") or task_type
+
+        high_risk_types = {
+            "generate_ip_assignment",
+            "generate_83b",
+            "generate_safe",
+            "generate_provisional_patent",
+        }
+        medium_risk_types = {
+            "formation_package",
+            "generate_all",
+            "generate_operating_agreement",
+            "generate_ciia",
+        }
+
+        if task_type in high_risk_types:
+            risk_tier = "high"
+        elif task_type in medium_risk_types:
+            risk_tier = "medium"
+        else:
+            risk_tier = "low"
+
+        return {
+            "agent": self.name,
+            "intended_action": task_type,
+            "document_id": doc_id,
+            "business_name": task_payload.get("business_name"),
+            "entity_type": task_payload.get("entity_type"),
+            "state": task_payload.get("state"),
+            "risk_tier": risk_tier,
+            "imda_pillar": "Human Accountability",
+            "data_sensitivity": "PII / legally binding",
+            "side_effects": "file_write_only",
+            "reversibility": "fully reversible before signing",
+            "rationale": (
+                f"{self.name} will generate a {doc_id} using LLM templates; "
+                "output is a draft file on disk requiring human review and "
+                "signature before it has legal effect."
+            ),
+        }
         os.makedirs(self.docs_dir, exist_ok=True)
 
     def analyze(self, context: Dict) -> Dict:

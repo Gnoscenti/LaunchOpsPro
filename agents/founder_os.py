@@ -52,6 +52,131 @@ class FounderOSAgent:
     def __init__(self, llm_client=None, config=None):
         self.client = llm_client or _get_openai_client()
         self.model = (config or {}).get("model", _get_model())
+        # Lazy import to avoid pulling core.temporal at module-load time
+        from core.temporal import TemporalManager
+
+        self.temporal_engine = TemporalManager()
+
+    # ------------------------------------------------------------------
+    # Dynexis Daily Command Center — pomodoro-driven agenda
+    # ------------------------------------------------------------------
+    async def generate_daily_agenda(
+        self,
+        priorities: Optional[List[Dict[str, Any]]] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Return the Dynexis DailyCommandCenter payload.
+
+        Pulls raw priorities (either passed in, or derived from a minimal
+        default list), applies TemporalManager.build_agenda() to cap them
+        at 3 sprints and add pomodoro time blocks, then returns a generative
+        UI component descriptor the dashboard knows how to render.
+
+        Returned shape matches core/generative_ui.py conventions:
+            {
+                "type": "ui_component",
+                "component": "DailyCommandCenter",
+                "props": {
+                    "title": "What Matters Now",
+                    "sprints": [...],
+                    "focus_minutes": 25,
+                    "total_committed_minutes": 75,
+                    "revenue_rule": "...",
+                    "tool_gate_status": "LOCKED" | "OPEN",
+                },
+                "source_agent": "founder_os",
+            }
+        """
+        raw_priorities = priorities or self._default_priorities(context or {})
+        sprints = self.temporal_engine.build_agenda(raw_priorities)
+
+        current_mrr = (context or {}).get("current_mrr", 0.0) or (
+            context or {}
+        ).get("metrics", {}).get("current_mrr", 0.0)
+        tool_gate = "LOCKED" if float(current_mrr or 0) < 20000 else "OPEN"
+
+        return {
+            "type": "ui_component",
+            "component": "DailyCommandCenter",
+            "props": {
+                "title": "What Matters Now",
+                "date": date.today().isoformat(),
+                "sprints": sprints,
+                "focus_minutes": self.temporal_engine.focus_minutes,
+                "break_minutes": self.temporal_engine.break_minutes,
+                "total_committed_minutes": self.temporal_engine.total_committed_minutes(
+                    len(sprints)
+                ),
+                "revenue_rule": self.REVENUE_RULE,
+                "tool_gate_status": tool_gate,
+                "current_mrr": float(current_mrr or 0),
+            },
+            "source_agent": "founder_os",
+        }
+
+    def _default_priorities(self, context: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """
+        Baseline priorities when no live data is passed in. The top 3 are
+        selected deterministically so the UI renders without an LLM call.
+        Override by passing `priorities=` to generate_daily_agenda().
+        """
+        pipeline_deals = context.get("pipeline_deals") or []
+        stripe_data = context.get("stripe_data") or {}
+        has_pending_formation = bool(context.get("needs_formation_approval"))
+
+        candidates: List[Dict[str, Any]] = []
+
+        if has_pending_formation:
+            candidates.append(
+                {
+                    "name": "Approve Legal Formation Docs",
+                    "description": (
+                        "Review paperwork_agent output and sign off on "
+                        "Articles / Operating Agreement."
+                    ),
+                    "roi": 99,
+                }
+            )
+
+        if pipeline_deals:
+            top_deal = max(pipeline_deals, key=lambda d: float(d.get("amount", 0)))
+            candidates.append(
+                {
+                    "name": f"Close {top_deal.get('name', 'top pipeline deal')}",
+                    "description": f"Expected revenue: ${float(top_deal.get('amount', 0)):,.0f}",
+                    "roi": 95,
+                }
+            )
+
+        if stripe_data.get("mrr", 0) > 0:
+            candidates.append(
+                {
+                    "name": "Review Stripe webhook health",
+                    "description": "Confirm no failed events in the last 24h.",
+                    "roi": 70,
+                }
+            )
+
+        candidates.append(
+            {
+                "name": "Publish one proof artifact",
+                "description": "Revenue-first discipline — ship evidence, not busywork.",
+                "roi": 80,
+            }
+        )
+
+        # Always include the Mautic welcome sequence review if there's any
+        # growth activity — high-leverage activation move.
+        candidates.append(
+            {
+                "name": "Review Mautic welcome sequence",
+                "description": "Top-of-funnel retention check.",
+                "roi": 65,
+            }
+        )
+
+        return candidates
 
     # ------------------------------------------------------------------
     # Morning Agenda

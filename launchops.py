@@ -72,10 +72,11 @@ def build_system(config_path: str = None) -> dict:
         "security_agent": SecurityAgent(llm_client=llm, config=cfg),
     }
 
-    # Load optional infrastructure agents
+    # Load optional infrastructure agents.
+    # stripe_agent is deliberately excluded here — it is instantiated below
+    # with the shared MCPGateway so its capabilities self-register.
     optional_agents = {
         "wordpress_agent": "agents.wordpress_agent.WordPressAgent",
-        "stripe_agent": "agents.stripe_agent.StripeAgent",
         "mautic_agent": "agents.mautic_agent.MauticAgent",
         "paralegal_bot": "agents.paralegal_bot.ParalegalBot",
         "growth_agent": "agents.growth_agent.GrowthAgent",
@@ -91,6 +92,26 @@ def build_system(config_path: str = None) -> dict:
             agents[agent_name] = cls(llm_client=llm, config=cfg)
         except Exception:
             pass
+
+    # ── Phase 2: MCPGateway + StripeAgent with self-registered capabilities ─
+    mcp_gateway = None
+    try:
+        from core.mcp_gateway import MCPGateway
+
+        mcp_gateway = MCPGateway()
+    except Exception as e:
+        print(f"  Warning: MCPGateway unavailable: {e}")
+
+    try:
+        from agents.stripe_agent import StripeAgent
+
+        agents["stripe_agent"] = StripeAgent(
+            llm_client=llm,
+            config=cfg,
+            mcp_gateway=mcp_gateway,
+        )
+    except Exception as e:
+        print(f"  Warning: StripeAgent init failed: {e}")
 
     # Load new pipeline agents (Founder OS, DynExecutiv, Content Engine, Metrics)
     # These agents expect a raw OpenAI client (with .chat.completions.create),
@@ -122,6 +143,17 @@ def build_system(config_path: str = None) -> dict:
     # Wire agents as real stage handlers (THE CRITICAL FIX)
     register_all_handlers(orchestrator, agents)
 
+    # ── Phase 2: Register MCP capabilities for multi-agent ecosystem ─────
+    # StripeAgent self-registers create_saas_subscription in its __init__.
+    # This call adds the rest (paperwork, security, funding, growth, …).
+    if mcp_gateway is not None:
+        try:
+            from core.mcp_capabilities import register_launchops_capabilities
+
+            register_launchops_capabilities(mcp_gateway, agents)
+        except Exception as e:
+            print(f"  Warning: MCP capability registration failed: {e}")
+
     # Initialize pipeline
     pipeline = LaunchPipeline(orchestrator)
 
@@ -133,6 +165,7 @@ def build_system(config_path: str = None) -> dict:
         "agents": agents,
         "orchestrator": orchestrator,
         "pipeline": pipeline,
+        "mcp_gateway": mcp_gateway,
     }
 
 
