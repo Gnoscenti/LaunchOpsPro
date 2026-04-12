@@ -1,111 +1,124 @@
-# LaunchOps Founder Edition v3.0
+# Dynexis LaunchOps
 
-**The AI-Powered Business Operating System for Founders.**
+**Deploy a revenue-ready business in hours. Run it with zero drift. Cut everything that doesn't pay.**
 
-LaunchOps Founder Edition is a Tier 3, no-guardrails personal execution engine that launches production-ready businesses with MBA-grade intelligence. It combines 17 specialized agents, a 10-stage Atlas pipeline, a full infrastructure stack, and a daily operating system — all wired to produce real revenue from day one.
+Dynexis LaunchOps is a governed agentic platform that launches, operates, and scales revenue-generating businesses. 17 specialized AI agents execute a 10-stage pipeline — from entity formation through Stripe payments to go-to-market — while every action is attested through ProofGuard, a real-time cognitive governance layer with human-in-the-loop controls.
 
-This is the **canonical repo** for the Dynexis Systems founder launch. The founder's own business launch IS the product demo, documented live on YouTube.
+This is not a chatbot. This is an execution engine.
 
 ---
 
 ## Architecture
 
-The system operates across 5 layers:
+The system operates across 7 layers:
 
 | Layer | Purpose | Key Components |
 |-------|---------|----------------|
 | **1. LaunchOps Stack** | Infrastructure substrate | Docker Compose, WordPress, SuiteCRM, Mautic, Matomo, Vaultwarden |
-| **2. Founder OS** | Daily operating system | Morning agenda, midday check, evening review, weekly sprint |
-| **3. DynExecutiv** | Decision engine | Daily "What Matters Now", weekly executive brief, risk flags |
-| **4. Content Engine** | Lead generation | 30-day content calendar, post templates, UTM tracking |
-| **5. Metrics Enforcement** | Financial auditor | MRR, CAC, LTV, conversion funnel, automated cut rules |
+| **2. Founder OS** | Daily operating rhythm | Morning agenda, midday check, evening review, pomodoro sprints |
+| **3. DynExecutiv** | Decision engine | Daily brief, weekly executive report, risk flags from live data |
+| **4. Atlas Pipeline** | 10-stage launch engine | 17 agents, stage handlers, governed execution |
+| **5. ProofGuard** | Governance control plane | CQS attestation, IMDA compliance, HITL approval, audit trail |
+| **6. Generative UI** | Agent-to-dashboard rendering | Agents emit structured UI payloads; dashboard renders charts, KPI cards, alerts inline |
+| **7. MCP Gateway** | Agent-to-agent ecosystem | Model Context Protocol; external agents discover and invoke LaunchOps capabilities |
 
 ### File Layout
 
 ```
 launchops-founder-edition/
 ├── launchops.py                    # CLI entrypoint
-├── AGENTS.md                       # Operator standard
-├── AGENTS_ARCHITECT.md             # Systems architect standard
-├── AGENTS_LAUNCH_OPERATOR.md       # Launch operator standard
-├── PIPELINE_STATUS.md              # What's ready, what needs work
-├── LAUNCH_SEQUENCE.md              # Day-by-day launch playbook
-├── ROADMAP.md                      # Prioritized implementation plan
 │
 ├── core/                           # Engine internals
-│   ├── orchestrator.py             # Atlas orchestrator — stage pipeline
+│   ├── orchestrator.py             # Atlas orchestrator (Phase 1 sync + Phase 2 async governed)
+│   ├── proofguard.py               # ProofGuard governance middleware (CQS, HITL, attestation)
 │   ├── stage_handlers.py           # Wires agents to pipeline stages
-│   ├── config.py                   # LaunchOpsConfig dataclass + env loading
-│   ├── context.py                  # Shared context for all agents
+│   ├── generative_ui.py            # Agent → UI component payload system
+│   ├── mcp_gateway.py              # Model Context Protocol gateway + SDK shim
+│   ├── mcp_capabilities.py         # Central MCP capability registry
+│   ├── temporal.py                 # Pomodoro/timeboxing engine (TemporalManager)
+│   ├── context.py                  # Shared persistent context
 │   ├── credentials.py              # Fernet-encrypted credential vault
+│   ├── config.py                   # Configuration management
+│   ├── permissions.py              # Permission matrix + HITL flag
+│   ├── audit_log.py                # Structured audit logging
 │   ├── workflow_engine.py          # Workflow execution engine
-│   ├── task_graph.py               # Task graph model
-│   ├── permissions.py              # Human approval layer (feature-flagged)
-│   └── audit_log.py                # Structured audit logging
+│   └── task_graph.py               # Task dependency graph
 │
 ├── agents/                         # 17 specialized agents
-│   ├── base.py                     # BaseAgent with LLM integration
-│   ├── founder_os.py               # Layer 2: Daily operating system
-│   ├── dynexecutiv.py              # Layer 3: Decision engine
-│   ├── content_engine.py           # Layer 4: Content/lead gen
-│   ├── metrics_agent.py            # Layer 5: Metrics enforcement
-│   ├── execai_coach.py             # ExecAI Strategic Catalyst (HBS frameworks)
-│   ├── business_builder.py         # Build Spec intake, BMC, GTM, pricing
-│   ├── funding_intelligence.py     # VC/grant/SBIR funding engine
-│   ├── paperwork_agent.py          # IP protection + legal doc generation
-│   ├── documentary_tracker.py      # Solopreneur documentary engine
-│   ├── security_agent.py           # Server hardening + Bitwarden
+│   ├── base.py                     # BaseAgent with LLM + shell + Docker utilities
+│   ├── stripe_agent.py             # Stripe payments (MCP self-registering, async propose_plan)
+│   ├── paperwork_agent.py          # Legal docs + IP protection (propose_plan with risk classification)
+│   ├── security_agent.py           # Server hardening + Vaultwarden (propose_plan with sudo detection)
+│   ├── growth_agent.py             # GTM strategy (propose_plan with channel classification)
+│   ├── founder_os.py               # Daily OS with pomodoro sprint generation
+│   ├── dynexecutiv.py              # Decision engine with Generative UI payloads
+│   ├── execai_coach.py             # Harvard Business School coaching frameworks
+│   ├── business_builder.py         # Build Spec, BMC, GTM, pricing, 90-day plan
+│   ├── funding_intelligence.py     # VC, SBIR/STTR, grants, angel evaluation
+│   ├── content_engine.py           # 30-day content calendar, post templates
+│   ├── metrics_agent.py            # MRR, CAC, LTV, conversion funnel, cut enforcement
+│   ├── documentary_tracker.py      # Milestone logging, narrative export
 │   ├── wordpress_agent.py          # WordPress + WooCommerce deployment
-│   ├── stripe_agent.py             # Stripe payment configuration
-│   ├── mautic_agent.py             # Marketing automation
-│   ├── paralegal_bot.py            # Formation checklist + compliance
-│   ├── growth_agent.py             # Growth strategy
-│   ├── analytics_agent.py          # Analytics integration
-│   └── email_agent.py              # Email automation
+│   ├── mautic_agent.py             # Marketing automation, email campaigns
+│   ├── analytics_agent.py          # Matomo integration
+│   ├── email_agent.py              # Transactional + marketing email
+│   └── paralegal_bot.py            # Formation checklist, compliance
+│
+├── api/                            # FastAPI Operator API
+│   ├── main.py                     # App with all route modules mounted
+│   ├── state.py                    # Singleton orchestrator + context
+│   ├── routes/
+│   │   ├── pipeline.py             # Phase 1 /atlas/execute (SSE)
+│   │   ├── execute_v2.py           # Phase 2 /atlas/v2/execute (governed SSE) + HITL
+│   │   ├── command_center.py       # /api/v1/atlas/launch + /stream + /daily-brief
+│   │   ├── dynexecutiv.py          # /dynexecutiv/stream (Generative UI SSE)
+│   │   ├── mcp.py                  # /mcp/discover + /mcp/invoke + /mcp/health
+│   │   ├── health.py               # /health
+│   │   ├── config.py               # /prompts, /permissions, /atlas/context
+│   │   ├── artifacts.py            # /artifacts
+│   │   └── services.py             # /services (Docker health)
+│   └── models/
+│       ├── pipeline.py             # Pydantic request/response models
+│       └── services.py             # Service health models
+│
+├── dashboard/                      # Dynexis React Dashboard
+│   └── src/
+│       ├── App.tsx                  # Router + Dynexis-branded sidebar
+│       ├── pages/
+│       │   ├── Dashboard.tsx        # Command center overview
+│       │   ├── PipelineView.tsx     # Launch (Phase 1) + Launch (Governed) + event stream
+│       │   ├── DailyBrief.tsx       # DynExecutiv Generative UI stream
+│       │   ├── Runs.tsx             # Execution history
+│       │   ├── Agents.tsx           # Agent registry
+│       │   ├── Artifacts.tsx        # Generated documents
+│       │   ├── Services.tsx         # Docker service health
+│       │   ├── Logs.tsx             # Audit log viewer
+│       │   ├── Prompts.tsx          # Prompt templates
+│       │   └── Permissions.tsx      # Permission matrix
+│       ├── components/generative/   # Generative UI components
+│       │   ├── AnalyticsChart.tsx    # Bar/line chart (inline SVG)
+│       │   ├── AlertBanner.tsx       # Severity-based dismissable alert
+│       │   ├── KPICard.tsx           # Big-number KPI with delta + sparkline
+│       │   ├── ActionList.tsx        # Interactive task checklist
+│       │   ├── HITLApprovalCard.tsx   # ProofGuard approve/reject card
+│       │   ├── DailyCommandCenter.tsx # Pomodoro sprint board
+│       │   └── GenerativeUIRenderer.tsx # Dynamic dispatcher
+│       ├── hooks/
+│       │   └── useAgentStream.ts    # Dual-mode SSE consumer (GET/POST)
+│       └── lib/
+│           ├── api.ts               # REST + SSE client helpers
+│           └── componentRegistry.ts  # Component name → React mapping
 │
 ├── tools/                          # Shared tooling
-│   ├── llm_client.py               # Unified OpenAI/Anthropic client
+│   ├── llm_client.py               # Unified OpenAI/Anthropic client + MCPGateway re-export
 │   └── web_navigator.py            # Playwright browser automation
 │
-├── workflows/                      # Pipeline definitions
-│   └── launch_pipeline.py          # 10-stage master launch pipeline
-│
-├── templates/                      # Output templates
-│   ├── daily_brief.md              # Founder OS daily template
-│   ├── weekly_brief.md             # DynExecutiv weekly brief template
-│   ├── weekly_sprint.md            # Weekly sprint plan template
-│   └── content_calendar.md         # 30-day content calendar template
-│
-├── verticals/                      # Industry vertical configs
-│   ├── saas.py
-│   ├── ecommerce.py
-│   ├── agency.py
-│   └── marketplace.py
-│
-├── api/                            # FastAPI operator API (Phase 2)
-│   ├── main.py                     # API server with Atlas integration
-│   ├── routes/                     # Modular route handlers
-│   └── models/                     # Pydantic models
-│
-├── dashboard/                      # React/Vite founder dashboard (Phase 3)
-│   └── src/
-│       ├── pages/
-│       ├── components/
-│       └── lib/
-│
-├── docs/                           # Documentation
-│   ├── ARCHITECTURE_V2.md          # Detailed architecture docs
-│   ├── HETZNER_SETUP.md            # VPS deployment guide
-│   ├── FOUNDER_AUTOPILOT_ALIGNMENT.md
-│   └── checklist.md                # Deployment verification checklist
-│
-├── docker-compose.yml              # Full LaunchOps infrastructure stack
+├── docker-compose.yml              # Business infrastructure stack
 ├── install.sh                      # One-command stack deployment
 ├── healthcheck.sh                  # Service health verification
-├── nginx/conf.d/                   # Reverse proxy configuration
-├── .env.example                    # Environment variable template
 ├── requirements.txt                # Python dependencies
-└── tests/                          # Test suite
+└── tests/
+    └── test_agents.py              # 49 unit tests
 ```
 
 ---
@@ -115,47 +128,76 @@ launchops-founder-edition/
 ### Prerequisites
 
 - Python 3.10+
+- Node.js 20+ (for the dashboard)
 - Docker and Docker Compose
 - At least one LLM API key (OpenAI or Anthropic)
 - 4GB RAM minimum, 8GB recommended
 
-### Installation
+### 1. Install
 
 ```bash
-# Clone
-git clone https://github.com/MicroAIStudios-DAO/launchops-founder-edition.git
-cd launchops-founder-edition
+git clone https://github.com/Gnoscenti/LaunchOpsPro.git
+cd LaunchOpsPro/launchops-founder-edition
 
-# Install dependencies
+# Python dependencies
+python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
+
+# Dashboard dependencies
+cd dashboard && npm install && cd ..
 
 # Configure environment
 cp .env.example .env
-# Edit .env — at minimum set OPENAI_API_KEY
+# Edit .env — set at minimum:
+#   OPENAI_API_KEY or ANTHROPIC_API_KEY
+#   PROOFGUARD_API_URL (default: http://localhost:3000/api/attest)
+#   ENABLE_HUMAN_APPROVAL=true (recommended)
 
-# Verify installation
+# Verify
 python launchops.py health
 ```
 
-### Deploy Infrastructure
+### 2. Deploy Business Infrastructure
 
 ```bash
-# Deploy the full LaunchOps stack (WordPress, SuiteCRM, Mautic, Matomo, Vaultwarden)
+# Deploy WordPress, SuiteCRM, Mautic, Matomo, Vaultwarden
 chmod +x install.sh && ./install.sh
 
-# Verify all services are running
+# Verify all services
 chmod +x healthcheck.sh && ./healthcheck.sh
 ```
 
-### Launch the Pipeline
+### 3. Start the Operator API + Dashboard
 
 ```bash
-# Run the full 10-stage pipeline (agents execute real work)
-python launchops.py launch
+# Terminal 1 — FastAPI backend
+python -m api.main
+# Serves on http://localhost:8001
 
-# Or run individual stages
-python launchops.py stage init
-python launchops.py stage formation
+# Terminal 2 — React dashboard
+cd dashboard && npm run dev
+# Serves on http://localhost:5173
+```
+
+### 4. Launch the Pipeline
+
+**From the dashboard** (recommended): Navigate to **Pipeline** and click **Launch (Governed)** to run the full pipeline with ProofGuard attestation and per-agent SSE streaming.
+
+**From the API** (programmatic):
+```bash
+# Kick off a governed pipeline run
+curl -X POST http://localhost:8001/api/v1/atlas/launch \
+  -H "Content-Type: application/json" \
+  -d '{"enforce_hitl": true}'
+
+# Stream live events
+curl -N http://localhost:8001/api/v1/atlas/stream/{deployment_id}
+```
+
+**From the CLI** (quick runs):
+```bash
+python launchops.py launch          # Full pipeline
+python launchops.py stage formation # Single stage
 python launchops.py stage payments
 python launchops.py stage growth
 ```
@@ -164,55 +206,168 @@ python launchops.py stage growth
 
 ## The 10-Stage Atlas Pipeline
 
-Every stage is wired to real agents that execute real work:
+Every stage flows through ProofGuard governance: **propose plan** → **CQS attestation** → **HITL approval (if flagged)** → **execute** → **audit write-back**.
 
-| Stage | Agents Involved | What Happens |
-|-------|----------------|--------------|
-| **init** | ExecAI Coach | System initialization, business config validation |
-| **intake** | Business Builder, DynExecutiv | Business spec analysis, revenue-first prioritization |
-| **formation** | Paralegal Bot, Paperwork Agent | Entity formation docs, compliance checks |
-| **infrastructure** | WordPress Agent, Security Agent | WordPress deployment, security audit |
-| **legal** | Paperwork Agent, Paralegal Bot | Legal document generation, IP audit |
-| **payments** | Stripe Agent | Stripe products, pricing, webhook setup |
-| **funding** | Funding Intelligence | Funding readiness report across all avenues |
-| **coaching** | ExecAI Coach, Founder OS | Strategic coaching session, daily plan generation |
-| **growth** | Growth Agent, Content Engine, Mautic Agent | Growth strategy, content calendar, email campaigns |
-| **done** | Documentary Tracker, Metrics Agent | Documentary narrative, metrics snapshot, final report |
+| Stage | Agents | What Happens | Risk Tier |
+|-------|--------|--------------|-----------|
+| **init** | ExecAI Coach, Metrics Agent | System init, business config, baseline metrics | Low |
+| **intake** | Business Builder, DynExecutiv | Business spec analysis, live Stripe/CRM data pull, daily agenda | Low |
+| **formation** | Paralegal Bot, Paperwork Agent | Entity formation docs, compliance checks, EIN filing | Medium |
+| **infrastructure** | WordPress Agent, Security Agent | WordPress deployment, security audit, analytics setup | Medium |
+| **legal** | Paperwork Agent, Paralegal Bot | Legal docs (NDA, CIIA, Privacy, ToS, IP Assignment), IP audit | High |
+| **payments** | Stripe Agent | Stripe products, recurring pricing, webhook config | High |
+| **funding** | Funding Intelligence | Funding readiness across VC, SBIR, grants, angel | Low |
+| **coaching** | ExecAI Coach, Founder OS, DynExecutiv | Strategy session, weekly sprint plan, executive brief | Low |
+| **growth** | Growth Agent, Content Engine, Mautic Agent | GTM strategy, 30-day calendar, email campaigns | Medium |
+| **done** | Documentary Tracker, Metrics Agent, Founder OS | Final metrics, narrative, evening review | Low |
 
 ---
 
 ## The 17 Agents
 
-| Agent | Role |
-|-------|------|
-| **ExecAI Coach** | Harvard Business School coaching methodology (Porter's, Blue Ocean, JTBD) |
-| **Business Builder** | Build Spec intake, BMC, GTM, pricing, 90-day ops plan |
-| **Funding Intelligence** | VC, SBIR/STTR, grants, angel, formation optimizer |
-| **Paperwork Agent** | IP protection, NDA, CIIA, Privacy Policy, ToS generation |
-| **Founder OS** | Daily operating system — morning agenda, midday check, evening review |
-| **DynExecutiv** | Decision engine — daily/weekly briefs from live Stripe/CRM/Matomo data |
-| **Content Engine** | 30-day content calendar, post templates, UTM tracking |
-| **Metrics Agent** | MRR, CAC, LTV, conversion funnel, automated cut enforcement |
-| **Documentary Tracker** | Milestone logging, narrative generation, chapter export |
-| **Security Agent** | Server hardening, Bitwarden/Vaultwarden setup |
-| **WordPress Agent** | WordPress + WooCommerce deployment and configuration |
-| **Stripe Agent** | Payment processing, subscription, webhook configuration |
-| **Mautic Agent** | Marketing automation, email campaigns, lead scoring |
-| **Growth Agent** | Growth strategy, channel analysis, scaling playbook |
-| **Analytics Agent** | Matomo analytics integration and reporting |
-| **Email Agent** | Transactional and marketing email automation |
-| **Paralegal Bot** | Formation checklist, compliance verification |
+| Agent | Role | ProofGuard Hook |
+|-------|------|-----------------|
+| **ExecAI Coach** | Harvard Business School coaching (Porter's, Blue Ocean, JTBD) | Passthrough |
+| **Business Builder** | Build Spec intake, BMC, GTM, pricing, 90-day ops plan | Passthrough |
+| **Funding Intelligence** | VC, SBIR/STTR, grants, angel, formation optimizer | Passthrough |
+| **Paperwork Agent** | IP protection, NDA, CIIA, Privacy Policy, ToS, 83(b), SAFE | Native (risk-classified) |
+| **Founder OS** | Daily OS with pomodoro sprints; morning agenda, midday check, evening review | Native (async) |
+| **DynExecutiv** | Decision engine with Generative UI; daily/weekly briefs from live data | Native (async) |
+| **Content Engine** | 30-day content calendar, post templates, UTM tracking | Passthrough |
+| **Metrics Agent** | MRR, CAC, LTV, conversion funnel, automated cut enforcement | Passthrough |
+| **Documentary Tracker** | Milestone logging, narrative generation, chapter export | Passthrough |
+| **Security Agent** | Server hardening, Vaultwarden, SSL, firewall, 2FA | Native (sudo-flagged) |
+| **WordPress Agent** | WordPress + WooCommerce deployment and configuration | Passthrough |
+| **Stripe Agent** | Payment processing, subscription tiers, webhook configuration | Native (MCP self-registering) |
+| **Mautic Agent** | Marketing automation, email campaigns, lead scoring | Passthrough |
+| **Growth Agent** | Growth strategy, channel analysis, AARRR framework | Native (channel-classified) |
+| **Analytics Agent** | Matomo analytics integration and reporting | Passthrough |
+| **Email Agent** | Transactional and marketing email automation | Passthrough |
+| **Paralegal Bot** | Formation checklist, compliance verification | Passthrough |
 
 ---
 
-## Commands
+## API Endpoints
+
+### Atlas Pipeline
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/v1/atlas/launch` | Kick off governed pipeline (returns `deployment_id`) |
+| GET | `/api/v1/atlas/stream/{id}` | Stream live SSE events for a deployment |
+| GET | `/api/v1/atlas/deployments` | List active deployments |
+| GET | `/api/v1/daily-brief` | FounderOS pomodoro agenda (JSON) |
+| POST | `/atlas/v2/execute` | Phase 2 governed execute (SSE stream) |
+| POST | `/atlas/v2/execute/stage` | Governed single-stage execution |
+| GET | `/atlas/v2/status` | Governance configuration |
+| POST | `/atlas/v2/hitl/{id}/approve` | HITL approve an attestation |
+| POST | `/atlas/v2/hitl/{id}/reject` | HITL reject an attestation |
+
+### Generative UI
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/dynexecutiv/stream` | DynExecutiv Generative UI SSE stream |
+| GET | `/dynexecutiv/status` | DynExecutiv agent health |
+
+### MCP Gateway
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET/POST | `/mcp/discover` | List registered MCP capabilities |
+| POST | `/mcp/invoke` | Invoke a capability (ProofGuard-gated) |
+| GET | `/mcp/health` | Gateway health + registered tool count |
+
+### Observability
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/health` | System health |
+| GET | `/atlas/status` | Orchestrator status |
+| GET | `/atlas/stages` | Pipeline stage list with status |
+| GET | `/atlas/runs` | Execution history |
+| GET | `/atlas/logs` | Audit log |
+| GET | `/atlas/agents` | Agent registry |
+| GET | `/atlas/context` | Full context dump |
+| GET | `/artifacts/` | Generated document list |
+| GET | `/services/` | Docker service health |
+
+---
+
+## SSE Event Stream
+
+When streaming a governed pipeline via `/api/v1/atlas/stream/{id}` or `/atlas/v2/execute`, the backend emits these Server-Sent Events:
+
+```
+pipeline_start  → stage_start  → agent_propose  → proofguard_verdict
+             → [hitl_waiting  → hitl_resumed]     (if REQUIRES_HITL)
+             → agent_executing → ui_component     (if agent emits widgets)
+             → agent_result   → stage_complete
+             → pipeline_complete | governance_halt
+```
+
+The dashboard renders `ui_component` events inline as live charts, KPI cards, alert banners, action lists, HITL approval cards, and pomodoro sprint boards.
+
+---
+
+## Generative UI Components
+
+Agents emit structured `ui_component` payloads instead of plain text. The dashboard dispatches to a React component registry:
+
+| Component | Emitted By | What It Renders |
+|-----------|------------|-----------------|
+| `AnalyticsChart` | DynExecutiv | Bar/line chart with optional alert text |
+| `AlertBanner` | DynExecutiv | Severity-based alert with CTA button |
+| `KPICard` | DynExecutiv | Big-number KPI with delta and sparkline |
+| `ActionList` | DynExecutiv, FounderOS | Interactive task checklist with priority badges |
+| `HITLApprovalCard` | ProofGuard | Approve/reject card for paused attestations |
+| `DailyCommandCenter` | FounderOS | Pomodoro sprint board with 25-min timers |
+
+---
+
+## MCP Capabilities
+
+10 capabilities registered on the shared MCP gateway. External agents discover them via `GET /mcp/discover` and invoke via `POST /mcp/invoke` (every invocation goes through ProofGuard):
+
+| Capability | Agent | Description |
+|------------|-------|-------------|
+| `create_saas_subscription` | Stripe Agent | Create Stripe Product + recurring Price |
+| `generate_formation_package` | Paperwork Agent | Articles, Operating Agreement, Bylaws, EIN filing |
+| `generate_operating_agreement` | Paperwork Agent | Full Operating Agreement for LLC/Corp |
+| `generate_nda` | Paperwork Agent | Mutual Non-Disclosure Agreement |
+| `generate_privacy_policy` | Paperwork Agent | SaaS-ready privacy policy |
+| `generate_terms_of_service` | Paperwork Agent | SaaS Terms of Service |
+| `run_ip_audit` | Paperwork Agent | IP asset identification + filing priorities |
+| `run_security_audit` | Security Agent | Infrastructure security audit |
+| `funding_readiness_report` | Funding Intelligence | SAFE, Convertible Note, or Priced Round readiness |
+| `generate_growth_strategy` | Growth Agent | GTM strategy with channels + metrics |
+
+---
+
+## ProofGuard Governance
+
+Every agent action in the governed path is attested through the ProofGuard control plane:
+
+1. **Propose** — Agent drafts a plan (what it intends to do, risk tier, IMDA pillar, side effects)
+2. **Attest** — ProofGuard scores the plan (CQS 0-100) and returns a verdict (APPROVED / BLOCKED / REQUIRES_HITL)
+3. **HITL** — If flagged, execution pauses until a human approves or rejects via the dashboard
+4. **Execute** — Agent fires after governance clears
+5. **Audit** — Result is written back to ProofGuard for the compliance audit trail
+
+**IMDA Model Governance pillars supported:** Internal Governance, Human Accountability, Technical Robustness, User Enablement.
+
+**Risk tiers:** low, medium, high, critical. Agents self-classify their actions (e.g., PaperworkAgent marks 83(b) elections as `high`, SecurityAgent marks `harden` as `high` with `requires_sudo: true`).
+
+---
+
+## Commands (CLI)
 
 | Command | Description |
 |---------|-------------|
-| `launch` | Run the full 10-stage pipeline with all agents |
+| `launch` | Run the full 10-stage governed pipeline |
 | `stage <name>` | Run a single pipeline stage |
 | `status` | Show pipeline progress |
-| `health` | Check system health (LLM providers, agents, services) |
+| `health` | Check system health (LLM, agents, services) |
 | `coach` | Start an ExecAI coaching session |
 | `funding` | Run funding readiness report |
 | `formation` | Run formation structure optimizer |
@@ -229,11 +384,9 @@ Every stage is wired to real agents that execute real work:
 
 ## Operator Standards
 
-This repo is governed by three AGENTS.md files:
-
 | File | Scope |
 |------|-------|
-| `AGENTS.md` | General operator standard — founder-grade, revenue-first, zero-fluff |
+| `AGENTS.md` | General operator standard — founder-grade, revenue-first |
 | `AGENTS_ARCHITECT.md` | Systems architect standard — orchestrator integrity, agent development, security |
 | `AGENTS_LAUNCH_OPERATOR.md` | Launch operator standard — launch readiness, monetization bias, deployment rules |
 
@@ -241,8 +394,8 @@ This repo is governed by three AGENTS.md files:
 
 ## Cost Savings
 
-| Traditional Stack | LaunchOps Stack | Savings |
-|-------------------|-----------------|---------|
+| Traditional Stack | Dynexis LaunchOps | Savings |
+|-------------------|-------------------|---------|
 | MBA Consultant: $5,000+ | ExecAI Coach: $0 | **$5,000** |
 | Lawyer (formation + IP): $3,000+ | Paperwork Agent: $0 | **$3,000** |
 | Funding Consultant: $2,000+ | Funding Intelligence: $0 | **$2,000** |
@@ -253,22 +406,44 @@ This repo is governed by three AGENTS.md files:
 
 ## Security
 
-### Founder Edition (This Version)
+- **ProofGuard governance** — every agent action CQS-scored and IMDA-attested before execution
+- **Human-in-the-loop** — high-risk actions (payments, legal, hardening) pause for human approval
+- **Fernet-encrypted credential vault** (AES-128-CBC)
+- **Fail-closed governance** — if ProofGuard is unreachable, execution is blocked (not auto-approved)
+- **MCP token authentication** — external agent invocations require `EXTERNAL_MCP_TOKEN`
+- **All data stored locally** in `~/.launchops/` — no cloud dependencies for sensitive data
 
-- Full automation, zero guardrails — Tier 3 personal execution
-- Fernet-encrypted credential vault (AES-128-CBC)
-- All data stored locally in `~/.launchops/`
-- No cloud dependencies for sensitive data
-- Human approval layer available via `ENABLE_HUMAN_APPROVAL=true` feature flag
+### Environment Variables
+
+```bash
+# Required
+OPENAI_API_KEY=sk-...                    # or ANTHROPIC_API_KEY
+
+# Governance
+PROOFGUARD_API_URL=http://localhost:3000/api/attest
+PROOFGUARD_API_KEY=pg_live_...
+ENABLE_HUMAN_APPROVAL=true               # Recommended for production
+
+# Payments
+STRIPE_SECRET_KEY=sk_live_...
+
+# MCP (external agent auth)
+EXTERNAL_MCP_TOKEN=...
+
+# Infrastructure
+DOMAIN=yourdomain.com
+```
 
 ---
 
 ## Links
 
-- **Canonical Repo**: [MicroAIStudios-DAO/launchops-founder-edition](https://github.com/MicroAIStudios-DAO/launchops-founder-edition)
-- **LaunchOps Stack**: [Gnoscenti/launchops-stack](https://github.com/Gnoscenti/launchops-stack)
+- **LaunchOps Repo**: [Gnoscenti/LaunchOpsPro](https://github.com/Gnoscenti/LaunchOpsPro)
+- **ProofGuard AI**: [MicroAIStudios-DAO/proofguard-ai](https://github.com/MicroAIStudios-DAO/proofguard-ai)
 - **Dynexis Core**: [Gnoscenti/dynexis-core](https://github.com/Gnoscenti/dynexis-core)
+- **LaunchOps Stack**: [Gnoscenti/launchops-stack](https://github.com/Gnoscenti/launchops-stack)
+- **Upstream**: [MicroAIStudios-DAO/launchops-founder-edition](https://github.com/MicroAIStudios-DAO/launchops-founder-edition)
 
 ---
 
-**Built by Gnoscenti. Co-created with AI. The Canonical Integrated Founder-Grade Execution Engine.**
+**Built by Gnoscenti / MicroAI Studios. Revenue-first. Governed. Deployed in hours.**
