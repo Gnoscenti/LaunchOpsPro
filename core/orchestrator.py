@@ -13,6 +13,7 @@ Stages:
 
 import asyncio
 import inspect
+import logging
 import traceback
 from datetime import datetime
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
@@ -20,6 +21,8 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 from .config import get_config, LaunchOpsConfig
 from .context import SharedContext
 from .credentials import get_vault
+
+logger = logging.getLogger("LaunchOps.orchestrator")
 from .proofguard import (
     ProofGuardMiddleware,
     SecurityError,
@@ -86,11 +89,10 @@ class AtlasOrchestrator:
         end_idx = STAGES.index(end_stage) + 1 if end_stage else len(STAGES)
         stages_to_run = STAGES[start_idx:end_idx]
 
-        print(f"\n{'='*60}")
-        print(f"  LAUNCHOPS FOUNDER EDITION — ATLAS ORCHESTRATOR")
-        print(f"  Run ID: {self.context.run_id}")
-        print(f"  Stages: {' → '.join(stages_to_run)}")
-        print(f"{'='*60}\n")
+        logger.info(
+            "Pipeline started",
+            extra={"run_id": self.context.run_id, "stages": stages_to_run},
+        )
 
         self.context.log(f"Pipeline started: {stages_to_run}", agent="orchestrator")
 
@@ -109,9 +111,7 @@ class AtlasOrchestrator:
 
     def _execute_stage(self, stage: str):
         """Execute a single stage with hooks and error handling."""
-        print(f"\n{'─'*50}")
-        print(f"  STAGE: {stage.upper()}")
-        print(f"{'─'*50}")
+        logger.info("Stage starting: %s", stage, extra={"stage": stage})
 
         self.context.stage = stage
 
@@ -129,16 +129,19 @@ class AtlasOrchestrator:
                 result = handler(self.context, self.agents, self.config)
                 if result:
                     self.context.store_agent_output(f"stage_{stage}", result)
-                print(f"  ✓ {stage} complete")
+                logger.info("Stage complete: %s", stage, extra={"stage": stage})
             except Exception as e:
                 self.context.log_error(
                     f"Stage {stage} failed: {e}\n{traceback.format_exc()}",
                     agent="orchestrator",
                 )
-                print(f"  ✗ {stage} failed: {e}")
-                print(f"    Continuing to next stage...")
+                logger.error(
+                    "Stage failed: %s — %s", stage, e,
+                    extra={"stage": stage},
+                    exc_info=True,
+                )
         else:
-            print(f"  ⊘ No handler registered for {stage}")
+            logger.warning("No handler registered for stage: %s", stage, extra={"stage": stage})
 
         # Post-stage hooks
         for hook in self._hooks.get("post_stage", []):
@@ -163,26 +166,29 @@ class AtlasOrchestrator:
         }
 
     def _print_summary(self):
-        """Print run summary."""
+        """Log run summary."""
         errors = self.context._data.get("errors", [])
         milestones = self.context._data.get("documentary", {}).get("milestones", [])
 
-        print(f"\n{'='*60}")
-        print(f"  PIPELINE COMPLETE")
-        print(f"{'='*60}")
-        print(f"  Run ID:     {self.context.run_id}")
-        print(f"  Errors:     {len(errors)}")
-        print(f"  Milestones: {len(milestones)}")
-        if milestones:
-            print(f"\n  Milestones achieved:")
-            for m in milestones:
-                print(f"    ✓ {m['title']} ({m['achieved_at'][:10]})")
-        if errors:
-            print(f"\n  Errors encountered:")
-            for e in errors[-5:]:  # Last 5
-                print(f"    ✗ [{e['agent']}] {e['message'][:80]}")
-        print(f"\n  Context saved: {self.context.path}")
-        print(f"{'='*60}\n")
+        logger.info(
+            "Pipeline complete — %d errors, %d milestones, context at %s",
+            len(errors),
+            len(milestones),
+            self.context.path,
+            extra={
+                "run_id": self.context.run_id,
+                "errors": len(errors),
+                "milestones": len(milestones),
+            },
+        )
+        for m in milestones:
+            logger.info("Milestone: %s", m.get("title", "?"))
+        for e in errors[-5:]:
+            logger.error(
+                "Error [%s]: %s",
+                e.get("agent", "?"),
+                str(e.get("message", ""))[:120],
+            )
 
 
 # ══════════════════════════════════════════════════════════════════════════

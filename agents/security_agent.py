@@ -232,8 +232,15 @@ services:
     # ── Helpers ───────────────────────────────────────────────────────────
 
     def _run(self, cmd: str) -> str:
+        """
+        Run a shell command. Uses shell=True because hardening commands
+        require && chaining and 2>/dev/null redirection. All callers pass
+        hardcoded strings — no user input flows into cmd.
+        """
         try:
-            return subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30).stdout.strip()
+            return subprocess.run(
+                cmd, shell=True, capture_output=True, text=True, timeout=30  # nosec B602
+            ).stdout.strip()
         except Exception as e:
             return str(e)
 

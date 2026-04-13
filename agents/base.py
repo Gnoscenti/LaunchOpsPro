@@ -129,13 +129,45 @@ class BaseAgent(ABC):
 
     # ── Shell / System ────────────────────────────────────────────────────
 
-    def run_command(self, command: str, cwd: str = None, timeout: int = 300) -> Dict:
-        """Execute shell command. No restrictions."""
+    def run_command(
+        self,
+        command: str,
+        cwd: str = None,
+        timeout: int = 300,
+        allow_shell: bool = False,
+    ) -> Dict:
+        """
+        Execute a system command safely.
+
+        By default ``shell=False`` — the command string is split via
+        ``shlex.split`` and executed without a shell interpreter, which
+        prevents injection attacks when ``command`` contains untrusted
+        input. Pass ``allow_shell=True`` **only** when the command
+        requires shell features (pipes, ``&&`` chaining, redirects) AND
+        the caller guarantees the command string is not user-derived.
+        """
+        import shlex
+
         try:
-            result = subprocess.run(
-                command, shell=True, cwd=cwd,
-                capture_output=True, text=True, timeout=timeout,
-            )
+            if allow_shell:
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    cwd=cwd,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                )
+            else:
+                args = shlex.split(command)
+                result = subprocess.run(
+                    args,
+                    shell=False,
+                    cwd=cwd,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                )
             return {
                 "success": result.returncode == 0,
                 "stdout": result.stdout,

@@ -13,10 +13,12 @@ Environment:
     PROOFGUARD_API_URL       Base URL to the /api/attest route (default localhost:3000)
     PROOFGUARD_API_KEY       Bearer token for the Next.js/Supabase API
     ENABLE_HUMAN_APPROVAL    If "true", every stage goes through HITL regardless of CQS
-    PROOFGUARD_FAIL_OPEN     Dev-only escape hatch. If "true" and the API is unreachable,
-                             actions are APPROVED instead of BLOCKED. Never enable in prod.
     PROOFGUARD_HITL_TIMEOUT  Max seconds to wait for a human decision (default 3600)
     PROOFGUARD_POLL_INTERVAL Seconds between HITL polls (default 5)
+
+    REMOVED (Sprint 1 hardening):
+    PROOFGUARD_FAIL_OPEN was removed. The system is now fail-closed by
+    design — if ProofGuard is unreachable, actions are BLOCKED.
 """
 
 from __future__ import annotations
@@ -66,7 +68,6 @@ class ProofGuardMiddleware:
         api_url: Optional[str] = None,
         api_key: Optional[str] = None,
         hitl_enabled: Optional[bool] = None,
-        fail_open: Optional[bool] = None,
     ):
         self.api_url = api_url or os.getenv(
             "PROOFGUARD_API_URL", "http://localhost:3000/api/attest"
@@ -77,11 +78,11 @@ class ProofGuardMiddleware:
             if hitl_enabled is not None
             else os.getenv("ENABLE_HUMAN_APPROVAL", "false").lower() == "true"
         )
-        self.fail_open = (
-            fail_open
-            if fail_open is not None
-            else os.getenv("PROOFGUARD_FAIL_OPEN", "false").lower() == "true"
-        )
+        # FAIL-CLOSED by design. If ProofGuard is unreachable, actions are
+        # BLOCKED, not auto-approved. There is no env-var escape hatch.
+        # This is a deliberate architectural decision — governance must be
+        # reliable even when the control plane is down.
+        self.fail_open = False
         self.hitl_timeout = int(os.getenv("PROOFGUARD_HITL_TIMEOUT", "3600"))
         self.poll_interval = int(os.getenv("PROOFGUARD_POLL_INTERVAL", "5"))
 
@@ -273,16 +274,8 @@ class ProofGuardMiddleware:
         return headers
 
     def _fail_result(self, reason: str) -> Dict[str, Any]:
-        if self.fail_open:
-            logger.warning(
-                "[ProofGuard] FAIL-OPEN — allowing action despite error: %s", reason
-            )
-            return {
-                "status": STATUS_APPROVED,
-                "cqs_score": 0,
-                "attestation_id": None,
-                "reason": f"fail-open: {reason}",
-            }
+        """Fail-closed: unreachable ProofGuard always returns BLOCKED."""
+        logger.error("[ProofGuard] FAIL-CLOSED — action blocked: %s", reason)
         return {
             "status": STATUS_BLOCKED,
             "cqs_score": 0,
