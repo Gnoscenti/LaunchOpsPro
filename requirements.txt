@@ -1,44 +1,51 @@
-# LaunchOps Founder Edition — Dependencies
+# Dynexis LaunchOps — Dependencies
+#
+# SECURITY NOTE: Use exact pins (==) in production. The >= ranges below
+# are kept for development flexibility. Run `pip freeze > requirements.lock`
+# and reference requirements.lock in Dockerfile for reproducible builds.
+# Run `pip-audit` regularly to check for known CVEs.
 
-# Core
+# ── API framework ──────────────────────────────────────────────────────────
+fastapi>=0.110.0
+uvicorn[standard]>=0.27.0
+
+# ── Core ───────────────────────────────────────────────────────────────────
 requests>=2.31.0
 python-dotenv>=1.0.0
 pydantic>=2.0.0
 httpx>=0.27.0
 
-# CLI and utilities
+# ── CLI and utilities ──────────────────────────────────────────────────────
 click>=8.1.7
 rich>=13.7.0
 pyyaml>=6.0.1
 
-# Docker management
+# ── Docker management ─────────────────────────────────────────────────────
 docker>=7.0.0
 
-# Web automation
+# ── Web automation ─────────────────────────────────────────────────────────
 playwright>=1.44.0
 beautifulsoup4>=4.12.2
 
-# Encryption and security
+# ── Encryption and security ───────────────────────────────────────────────
 cryptography>=42.0.0
 
-# GitHub integration
+# ── GitHub integration ────────────────────────────────────────────────────
 PyGithub>=2.1.1
 
-# LLM integration (REQUIRED — not optional for Founder Edition)
+# ── LLM integration (REQUIRED) ────────────────────────────────────────────
 openai>=1.30.0
 anthropic>=0.25.0
 
-# Model Context Protocol (optional — core/mcp_gateway.py has a graceful
-# fallback shim, but installing the real SDK enables native agent-to-agent
-# discovery via /mcp/discover)
+# ── Model Context Protocol (optional — graceful fallback if missing) ─────
 mcp>=1.0.0
 
-# Documents and templates
+# ── Documents and templates ───────────────────────────────────────────────
 jinja2>=3.1.0
 markdown>=3.6.0
 
-# Infrastructure
+# ── Infrastructure ────────────────────────────────────────────────────────
 paramiko>=3.4.0
 
-# Payments
+# ── Payments ──────────────────────────────────────────────────────────────
 stripe>=9.0.0

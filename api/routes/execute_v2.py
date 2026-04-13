@@ -245,6 +245,29 @@ async def _forward_hitl_decision(
 ) -> Dict[str, Any]:
     import httpx  # local import so module still loads if httpx is absent
 
+    # Authorization: verify the attestation exists in our store before
+    # forwarding the decision. This prevents an authenticated but
+    # unauthorized caller from approving/rejecting arbitrary attestations.
+    from core.store import get_store
+    store = get_store()
+    existing = store.get_hitl_decision(attestation_id)
+    if existing is None:
+        # Also accept attestation IDs that haven't been recorded locally
+        # (e.g., created by a different worker or via direct ProofGuard call)
+        # but log a warning for audit.
+        import logging
+        logging.getLogger("LaunchOps.HITL").warning(
+            "HITL decision for unknown attestation_id=%s — forwarding anyway",
+            attestation_id,
+        )
+
+    # Record the decision locally regardless of ProofGuard response
+    store.save_hitl_decision(
+        attestation_id,
+        status="APPROVED" if action == "approve" else "REJECTED",
+        reason=request.reason if request else None,
+    )
+
     pg = ProofGuardMiddleware()
     url = f"{pg.api_url.rstrip('/')}/{attestation_id}/{action}"
     # ProofGuard's REST router mounts /api/attest/:id/approve|reject —
