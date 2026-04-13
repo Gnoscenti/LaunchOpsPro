@@ -1,0 +1,17 @@
+.git
+.env
+.env.local
+__pycache__
+*.pyc
+*.pyo
+venv/
+.venv/
+dashboard/node_modules/
+dashboard/dist/
+*.egg-info
+.launchops/
+.claude/
+_ref/
+docs/
+*.md
+!requirements.txt

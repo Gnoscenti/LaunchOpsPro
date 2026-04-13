@@ -1,6 +1,30 @@
 version: '3.8'
 
 services:
+  # ── Dynexis LaunchOps API ─────────────────────────────────────────────
+  launchops:
+    build: .
+    container_name: launchops_api
+    restart: always
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      LAUNCHOPS_API_PORT: "8001"
+      LAUNCHOPS_DB_PATH: /data/launchops.db
+    volumes:
+      - ./data/launchops:/data
+      - ./data/launchops_docs:/root/.launchops/documents
+    networks:
+      - launchops_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
   # 1. WordPress (Site + Course)
   wordpress:
     image: wordpress:latest

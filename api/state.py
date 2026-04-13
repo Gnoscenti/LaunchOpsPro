@@ -1,8 +1,12 @@
 """
-Shared application state — Atlas orchestrator and context singletons.
+Shared application state — Atlas orchestrator, context, and persistent store.
 
 Both the CLI (`python launchops.py launch`) and the API server share
 the same orchestrator and context, ensuring a single source of truth.
+
+The `run_store` list is a thin compatibility shim over the SQLite-backed
+StateStore (core/store.py). Existing routes that append to `run_store`
+still work but the data is also persisted to disk and survives restarts.
 """
 
 import sys
@@ -16,11 +20,13 @@ if str(REPO_ROOT) not in sys.path:
 
 from core.orchestrator import AtlasOrchestrator
 from core.context import SharedContext
+from core.store import get_store
 
 _atlas: Optional[AtlasOrchestrator] = None
 _context: Optional[SharedContext] = None
 
-# In-memory run history (persists for the lifetime of the API process)
+# Compatibility shim: existing routes append to this list. We keep it for
+# in-process reads but also write-through to SQLite so data survives.
 run_store: List[dict] = []
 
 
@@ -33,6 +39,11 @@ def get_atlas() -> AtlasOrchestrator:
         system = build_system()
         _atlas = system["orchestrator"]
         _context = system.get("context", _atlas.context)
+
+        # Hydrate in-memory run_store from SQLite on first boot
+        store = get_store()
+        for run in store.list_runs(limit=100):
+            run_store.append(run)
     return _atlas
 
 

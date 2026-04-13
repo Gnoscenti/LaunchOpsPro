@@ -79,7 +79,27 @@ class Deployment:
         }
 
 
+# In-process registry for ACTIVE deployments (the queue + asyncio.Task
+# objects can't be serialized to SQLite). Completed deployments are also
+# persisted to the SQLite StateStore so they survive restarts.
 DEPLOYMENTS: Dict[str, Deployment] = {}
+
+# Lazy import to avoid circular dependency at module load time.
+def _persist_deployment(dep: Deployment) -> None:
+    """Write-through to SQLite."""
+    try:
+        from core.store import get_store
+        get_store().save_deployment(
+            deployment_id=dep.id,
+            status=dep.status,
+            payload=dep.payload,
+            started_at=dep.started_at.isoformat() if dep.started_at else None,
+            completed_at=dep.completed_at.isoformat() if dep.completed_at else None,
+            event_count=dep.event_count,
+            last_error=dep.last_error,
+        )
+    except Exception:
+        pass  # best-effort; in-memory is the primary
 
 
 # ── Request/response models ─────────────────────────────────────────────────
@@ -112,6 +132,8 @@ async def _run_deployment(deployment: Deployment) -> None:
     deployment's async queue so the stream endpoint can fan it out.
     """
     deployment.status = "running"
+    _persist_deployment(deployment)
+
     atlas = get_atlas()
     proofguard = ProofGuardMiddleware(
         hitl_enabled=deployment.payload.get("enforce_hitl")
@@ -137,6 +159,7 @@ async def _run_deployment(deployment: Deployment) -> None:
         )
     finally:
         deployment.completed_at = datetime.utcnow()
+        _persist_deployment(deployment)
         # Signal end-of-stream to any connected consumers
         await deployment.queue.put(("__stream_end__", None))
 
@@ -236,15 +259,28 @@ async def stream_deployment(deployment_id: str) -> StreamingResponse:
 
 @router.get("/atlas/deployments")
 async def list_deployments(limit: int = 50) -> Dict[str, Any]:
-    """List the most recent deployments in memory."""
-    items = sorted(
-        DEPLOYMENTS.values(),
-        key=lambda d: d.started_at,
-        reverse=True,
-    )
+    """
+    List deployments. Merges in-memory active deployments with
+    historical records from SQLite so restarts don't lose history.
+    """
+    from core.store import get_store
+
+    # Active in-memory deployments take priority
+    active = {d.id: d.to_dict() for d in DEPLOYMENTS.values()}
+
+    # Historical from SQLite (may include completed entries from past runs)
+    try:
+        for row in get_store().list_deployments(limit=limit):
+            dep_id = row.get("deployment_id")
+            if dep_id and dep_id not in active:
+                active[dep_id] = row
+    except Exception:
+        pass
+
+    items = sorted(active.values(), key=lambda d: d.get("started_at", ""), reverse=True)
     return {
-        "total": len(DEPLOYMENTS),
-        "deployments": [d.to_dict() for d in items[:limit]],
+        "total": len(items),
+        "deployments": items[:limit],
     }
 
 

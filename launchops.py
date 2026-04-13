@@ -220,25 +220,90 @@ def load_business_config() -> dict:
 
 
 def cmd_launch(system, args):
+    """
+    Run the full pipeline through the Phase 2 governed path.
+
+    Sprint 1 hardening: CLI now goes through Phase2Executor so every agent
+    action is ProofGuard-attested, even from the command line. The old
+    ungoverned AtlasOrchestrator.run() is retained as an internal helper
+    but is no longer exposed as a public execution path.
+    """
+    import asyncio
+    from core.orchestrator import Phase2Executor
+    from core.proofguard import ProofGuardMiddleware
+    from core.logging_config import configure_logging, set_context
+
+    configure_logging()
+
     business = load_business_config()
     if not business.get("business_name"):
         print("\n  Business config is empty!")
         print(f"  Edit: ~/.launchops/business.json")
         print("  Then run: python launchops.py launch\n")
         return
-    pipeline = system["pipeline"]
-    return pipeline.run(business, skip_infra=getattr(args, "skip_infra", False))
+
+    orchestrator = system["orchestrator"]
+    orchestrator.context.set("business", business)
+
+    proofguard = ProofGuardMiddleware()
+    executor = Phase2Executor(orchestrator, proofguard=proofguard)
+
+    set_context(run_id=orchestrator.context.run_id)
+
+    async def _run():
+        async for event_name, data in executor.run_pipeline():
+            # Print events to stdout for CLI visibility
+            stage = data.get("stage", "") if isinstance(data, dict) else ""
+            agent = data.get("agent", "") if isinstance(data, dict) else ""
+            status = data.get("status", "") if isinstance(data, dict) else ""
+            cqs = data.get("cqs_score", "") if isinstance(data, dict) else ""
+
+            if event_name == "stage_start":
+                print(f"\n  STAGE: {stage}")
+            elif event_name == "proofguard_verdict":
+                print(f"    ProofGuard: {agent} → {status} (CQS {cqs})")
+            elif event_name == "stage_complete":
+                print(f"    ✓ {stage} complete")
+            elif event_name == "stage_error":
+                err = data.get("error", "") if isinstance(data, dict) else str(data)
+                print(f"    ✗ {stage} failed: {err}")
+            elif event_name == "governance_gate_blocked":
+                gate = data.get("gate", "") if isinstance(data, dict) else ""
+                print(f"    ⛔ Governance gate blocked: {gate}")
+            elif event_name == "pipeline_complete":
+                completed = data.get("stages_completed", 0) if isinstance(data, dict) else 0
+                errors = data.get("errors", 0) if isinstance(data, dict) else 0
+                print(f"\n  Pipeline complete — {completed} stages, {errors} errors")
+
+    asyncio.run(_run())
 
 
 def cmd_stage(system, args):
+    """Run a single stage through the governed path."""
+    import asyncio
+    from core.orchestrator import Phase2Executor
+    from core.proofguard import ProofGuardMiddleware
+    from core.logging_config import configure_logging
+
+    configure_logging()
+
     business = load_business_config()
-    pipeline = system["pipeline"]
     stage = getattr(args, "stage_name", None)
     if not stage:
         print("Usage: python launchops.py stage <stage_name>")
         return
-    result = pipeline.run_stage(stage, business)
-    print(json.dumps(result, indent=2, default=str))
+
+    orchestrator = system["orchestrator"]
+    orchestrator.context.set("business", business)
+
+    proofguard = ProofGuardMiddleware()
+    executor = Phase2Executor(orchestrator, proofguard=proofguard)
+
+    try:
+        result = asyncio.run(executor.execute_stage(stage))
+        print(json.dumps(result, indent=2, default=str))
+    except Exception as e:
+        print(f"  Stage '{stage}' failed: {e}")
 
 
 def cmd_status(system, args):
