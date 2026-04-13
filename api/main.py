@@ -63,6 +63,7 @@ from api.routes import (
     dynexecutiv,
     mcp as mcp_routes,
     command_center,
+    onboarding,
 )
 
 app = FastAPI(
@@ -86,6 +87,7 @@ app.include_router(execute_v2.router)         # Phase 2 governed /atlas/v2/execu
 app.include_router(dynexecutiv.router)        # Phase 3 Generative UI stream
 app.include_router(mcp_routes.router)         # Phase 4 /mcp/discover + /mcp/invoke
 app.include_router(command_center.router)    # Gnoscenti Command Center /api/v1/*
+app.include_router(onboarding.router)        # 1-Click Vertical Onboarding /api/v1/onboard
 app.include_router(config.router)
 app.include_router(artifacts.router)
 app.include_router(services.router)

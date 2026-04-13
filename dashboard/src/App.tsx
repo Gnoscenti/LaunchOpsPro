@@ -23,6 +23,7 @@ import Prompts from './pages/Prompts'
 import Permissions from './pages/Permissions'
 import Runs from './pages/Runs'
 import DailyBrief from './pages/DailyBrief'
+import Onboarding from './pages/Onboarding'
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { refetchInterval: 5000 } },
@@ -30,6 +31,7 @@ const queryClient = new QueryClient({
 
 const NAV_ITEMS = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/launch', icon: Rocket, label: 'Launch' },
   { to: '/pipeline', icon: Rocket, label: 'Pipeline' },
   { to: '/brief', icon: Sparkles, label: 'Daily Brief' },
   { to: '/services', icon: Server, label: 'Services' },
@@ -96,6 +98,7 @@ function App() {
             <div className="max-w-7xl mx-auto p-6">
               <Routes>
                 <Route path="/" element={<Dashboard />} />
+                <Route path="/launch" element={<Onboarding />} />
                 <Route path="/pipeline" element={<PipelineView />} />
                 <Route path="/brief" element={<DailyBrief />} />
                 <Route path="/services" element={<Services />} />

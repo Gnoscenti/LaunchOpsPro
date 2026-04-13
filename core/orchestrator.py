@@ -300,10 +300,15 @@ class Phase2Executor:
         self,
         atlas: AtlasOrchestrator,
         proofguard: Optional[ProofGuardMiddleware] = None,
+        governance_gates: Optional[Dict[str, Any]] = None,
     ):
         self.atlas = atlas
         self.proofguard = proofguard or ProofGuardMiddleware()
         self.state: Dict[str, Any] = {}
+        # Governance gates: keyed by target stage name.  Each gate has
+        #   requires_stages, validation_checks, block_on_failure.
+        # Set by the onboarding flow via VerticalDeploymentPlan.governance_gates.
+        self._governance_gates = governance_gates or {}
 
     # ── Single-agent governed execution ───────────────────────────────────
 
@@ -591,9 +596,66 @@ class Phase2Executor:
         async def stream_cb(event: str, data: Dict[str, Any]) -> None:
             await event_queue.put((event, data))
 
+        completed_stages: List[str] = []
         errors: List[Dict[str, Any]] = []
 
         for i, stage in enumerate(stages_to_run):
+            # ── Governance Gate Check ────────────────────────────────────
+            # If the vertical deployment plan defines a gate for this stage,
+            # verify that all prerequisite stages completed and that the
+            # required validation checks are present in shared context.
+            gate = self._governance_gates.get(stage)
+            if gate is not None:
+                gate_name = getattr(gate, "name", str(gate))
+                requires = getattr(gate, "requires_stages", [])
+                checks = getattr(gate, "validation_checks", [])
+                block = getattr(gate, "block_on_failure", True)
+
+                # Prerequisite stages check
+                missing_stages = [s for s in requires if s not in completed_stages]
+
+                # Validation checks against shared context
+                failed_checks = []
+                for check_key in checks:
+                    ctx_val = getattr(self.atlas.context, "get", lambda k, d=None: d)(check_key)
+                    state_val = self.state.get(check_key)
+                    if not ctx_val and not state_val:
+                        failed_checks.append(check_key)
+
+                if missing_stages or failed_checks:
+                    gate_payload = {
+                        "stage": stage,
+                        "gate": gate_name,
+                        "missing_stages": missing_stages,
+                        "failed_checks": failed_checks,
+                        "block_on_failure": block,
+                    }
+
+                    if block:
+                        yield ("governance_gate_blocked", gate_payload)
+                        errors.append({
+                            "stage": stage,
+                            "error": f"Governance gate '{gate_name}' blocked: "
+                                     f"missing stages={missing_stages}, "
+                                     f"failed checks={failed_checks}",
+                            "kind": "governance_gate",
+                        })
+                        yield (
+                            "stage_error",
+                            {"stage": stage, "index": i,
+                             "error": f"Governance gate blocked: {gate_name}",
+                             "kind": "governance_gate"},
+                        )
+                        continue  # Skip this stage
+                    else:
+                        yield ("governance_gate_warning", gate_payload)
+
+                else:
+                    yield (
+                        "governance_gate_passed",
+                        {"stage": stage, "gate": gate_name},
+                    )
+
             yield (
                 "stage_start",
                 {
@@ -617,6 +679,7 @@ class Phase2Executor:
 
             try:
                 await task
+                completed_stages.append(stage)
                 yield (
                     "stage_complete",
                     {"stage": stage, "index": i, "status": "completed"},
