@@ -1,0 +1,149 @@
+# ============================================================
+# LaunchOps Founder Edition — Production Deploy Workflow
+# Repo: MicroAIStudios-DAO/launchops-founder-edition
+#
+# Triggers on push to master branch.
+# SSHs into a Vultr Cloud Compute instance (Ubuntu 22.04), writes
+# .env from GitHub Secrets, pulls latest code, rebuilds and
+# restarts the full Docker Compose stack, then runs health
+# checks to confirm all services are live.
+#
+# Required GitHub Secrets (Settings → Secrets → Actions):
+#   VPS_HOST          — Vultr instance public IPv4 address
+#   VPS_USER          — SSH login user (root or ubuntu)
+#   VPS_SSH_KEY       — Private SSH key (PEM format, full content)
+#   VPS_DEPLOY_PATH   — Absolute path to repo on instance (e.g. /opt/launchops)
+#   OPENAI_API_KEY    — OpenAI API key for LLM agents
+#   DB_PASSWORD       — MariaDB user password
+#   DB_ROOT_PASSWORD  — MariaDB root password
+#   VAULT_ADMIN_TOKEN — Vaultwarden admin token
+# ============================================================
+
+name: Deploy to Vultr Cloud Compute
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:        # allow manual trigger from GitHub UI
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  deploy:
+    name: SSH → Pull → Compose Up → Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # ── 1. Checkout (for context; actual deploy runs on Droplet) ──────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Validate required secrets are present ──────────────────────────
+      - name: Validate secrets
+        run: |
+          missing=""
+          [ -z "${{ secrets.VPS_HOST }}" ]          && missing="$missing VPS_HOST"
+          [ -z "${{ secrets.VPS_USER }}" ]          && missing="$missing VPS_USER"
+          [ -z "${{ secrets.VPS_SSH_KEY }}" ]       && missing="$missing VPS_SSH_KEY"
+          [ -z "${{ secrets.VPS_DEPLOY_PATH }}" ]   && missing="$missing VPS_DEPLOY_PATH"
+          [ -z "${{ secrets.OPENAI_API_KEY }}" ]    && missing="$missing OPENAI_API_KEY"
+          [ -z "${{ secrets.DB_PASSWORD }}" ]       && missing="$missing DB_PASSWORD"
+          [ -z "${{ secrets.DB_ROOT_PASSWORD }}" ]  && missing="$missing DB_ROOT_PASSWORD"
+          [ -z "${{ secrets.VAULT_ADMIN_TOKEN }}" ] && missing="$missing VAULT_ADMIN_TOKEN"
+          if [ -n "$missing" ]; then
+            echo "❌ Missing required secrets:$missing"
+            exit 1
+          fi
+          echo "✅ All required secrets present."
+
+      # ── 3. Write .env file to Droplet and deploy ──────────────────────────
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          command_timeout: 15m
+          script: |
+            set -e
+
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  LaunchOps Deploy — $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # Navigate to deploy directory
+            cd ${{ secrets.VPS_DEPLOY_PATH }}
+
+            # Write .env file from secrets (overwrites on every deploy)
+            cat > .env << 'ENVEOF'
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+            DB_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}
+            VAULT_ADMIN_TOKEN=${{ secrets.VAULT_ADMIN_TOKEN }}
+            ENVEOF
+
+            echo "✅ .env written"
+
+            # Pull latest code from master
+            git fetch origin master
+            git reset --hard origin/master
+            echo "✅ Code pulled: $(git log --oneline -1)"
+
+            # Pull updated Docker images
+            docker compose pull --quiet
+            echo "✅ Docker images updated"
+
+            # Bring stack up (detached, remove orphans)
+            docker compose up -d --remove-orphans --build
+            echo "✅ docker compose up complete"
+
+            # Give services 15 seconds to initialize
+            echo "⏳ Waiting 15s for services to stabilize..."
+            sleep 15
+
+            # ── Health checks ─────────────────────────────────────
+            echo ""
+            echo "── Health Checks ────────────────────────────────"
+
+            check_service() {
+              local name=$1
+              local url=$2
+              local code
+              code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$url" || echo "000")
+              if [ "$code" = "200" ] || [ "$code" = "302" ] || [ "$code" = "301" ]; then
+                echo "  ✅ $name → HTTP $code"
+              else
+                echo "  ⚠️  $name → HTTP $code (may still be starting)"
+              fi
+            }
+
+            check_service "LaunchOps API"   "http://localhost:8001/health"
+            check_service "WordPress"       "http://localhost:8080"
+            check_service "SuiteCRM"        "http://localhost:8081"
+            check_service "Mautic"          "http://localhost:8082"
+            check_service "Matomo"          "http://localhost:8083"
+            check_service "Vaultwarden"     "http://localhost:8000"
+
+            echo ""
+            echo "── Running Containers ───────────────────────────"
+            docker compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "  Deploy complete ✅"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+      # ── 4. Notify on failure ──────────────────────────────────────────────
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "❌ Deploy failed. Check the SSH step logs above."
+          echo "Common causes:"
+          echo "  - Instance unreachable (check Vultr console / firewall)"
+          echo "  - SSH key mismatch (regenerate and update VPS_SSH_KEY secret)"
+          echo "  - Docker Compose error (SSH into instance and run: docker compose logs)
+          exit 1
