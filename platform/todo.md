@@ -123,3 +123,5 @@
 - [ ] Add Caddy to docker-compose.yml for automatic HTTPS
 - [ ] Create Caddyfile configuration
 - [ ] Update vultr_deploy.sh to prompt for domain and configure Caddy
+
+- [ ] Fix Docker build error by removing wouter patch from package.json
