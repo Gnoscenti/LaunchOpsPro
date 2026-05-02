@@ -130,3 +130,5 @@
 - [ ] Add firewall rules for ports 80 and 443 if missing
 
 - [ ] Fix Caddyfile email parsing error
+
+- [ ] Update Caddyfile to use :80
