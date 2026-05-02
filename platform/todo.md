@@ -125,3 +125,8 @@
 - [ ] Update vultr_deploy.sh to prompt for domain and configure Caddy
 
 - [ ] Fix Docker build error by removing wouter patch from package.json
+
+- [ ] Check Vultr firewall rules using API
+- [ ] Add firewall rules for ports 80 and 443 if missing
+
+- [ ] Fix Caddyfile email parsing error
