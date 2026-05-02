@@ -11,6 +11,8 @@ import {
   credentials,
   executionLogs,
   proofguardAttestations,
+  namingContests,
+  contestVotes,
   type InsertWorkflow,
   type InsertWorkflowStep,
   type InsertExecution,
@@ -19,6 +21,8 @@ import {
   type InsertCredential,
   type InsertExecutionLog,
   type InsertProofguardAttestation,
+  type InsertNamingContest,
+  type InsertContestVote,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -69,6 +73,26 @@ export async function getUserByOpenId(openId: string) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getUserByStripeCustomerId(stripeCustomerId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.stripeCustomerId, stripeCustomerId)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateUserStripeCustomerId(userId: number, stripeCustomerId: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(users).set({ stripeCustomerId }).where(eq(users.id, userId));
 }
 
 // ─── Workflows ───────────────────────────────────────────────────────────
@@ -514,6 +538,96 @@ export async function getWorkflowsWithStepCounts(userId: number) {
   );
 }
 
+// ─── Subscription / Tier Management ─────────────────────────────────────
+
+/**
+ * Get user subscription info by userId.
+ */
+export async function getUserSubscription(userId: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db.select({
+    id: users.id,
+    subscriptionTier: users.subscriptionTier,
+    reportCount: users.reportCount,
+    billingPeriodStart: users.billingPeriodStart,
+    stripeCustomerId: users.stripeCustomerId,
+    stripeSubscriptionId: users.stripeSubscriptionId,
+  }).from(users).where(eq(users.id, userId)).limit(1);
+  return result[0] ?? null;
+}
+
+/**
+ * Update user subscription tier.
+ */
+export async function updateUserTier(
+  userId: number,
+  tier: string,
+  stripeCustomerId?: string,
+  stripeSubscriptionId?: string
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const updateData: Record<string, unknown> = {
+    subscriptionTier: tier,
+  };
+  if (stripeCustomerId) updateData.stripeCustomerId = stripeCustomerId;
+  if (stripeSubscriptionId) updateData.stripeSubscriptionId = stripeSubscriptionId;
+  await db.update(users).set(updateData).where(eq(users.id, userId));
+}
+
+/**
+ * Increment report count for a user. Returns the new count.
+ * Resets count if billing period has rolled over (30 days).
+ */
+export async function incrementReportCount(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const user = await getUserSubscription(userId);
+  if (!user) throw new Error("User not found");
+
+  const now = new Date();
+  const periodStart = user.billingPeriodStart ? new Date(user.billingPeriodStart) : null;
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+  // Reset if no period or period expired
+  if (!periodStart || (now.getTime() - periodStart.getTime()) > thirtyDaysMs) {
+    await db.update(users).set({
+      reportCount: 1,
+      billingPeriodStart: now,
+    }).where(eq(users.id, userId));
+    return 1;
+  }
+
+  // Increment
+  const newCount = user.reportCount + 1;
+  await db.update(users).set({ reportCount: newCount }).where(eq(users.id, userId));
+  return newCount;
+}
+
+/**
+ * Get report usage for a user.
+ */
+export async function getReportUsage(userId: number) {
+  const user = await getUserSubscription(userId);
+  if (!user) return { used: 0, tier: 'explorer' as const };
+
+  const now = new Date();
+  const periodStart = user.billingPeriodStart ? new Date(user.billingPeriodStart) : null;
+  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+
+  // If period expired, count is effectively 0
+  if (!periodStart || (now.getTime() - periodStart.getTime()) > thirtyDaysMs) {
+    return { used: 0, tier: user.subscriptionTier as 'explorer' | 'founder' | 'governance' | 'enterprise' };
+  }
+
+  return {
+    used: user.reportCount,
+    tier: user.subscriptionTier as 'explorer' | 'founder' | 'governance' | 'enterprise',
+  };
+}
+
 // ─── ProofGuard Attestation Persistence ─────────────────────────────────
 
 /**
@@ -624,4 +738,133 @@ export async function getAttestationsForExecution(executionId: number) {
   return db.select().from(proofguardAttestations)
     .where(eq(proofguardAttestations.executionId, executionId))
     .orderBy(proofguardAttestations.createdAt);
+}
+
+// ─── Naming Contests (Viral Loop) ──────────────────────────────────────
+
+/**
+ * Create a new naming contest.
+ */
+export async function createNamingContest(data: InsertNamingContest) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(namingContests).values(data);
+  return { id: result[0].insertId };
+}
+
+/**
+ * Get a naming contest by shareId (public access).
+ */
+export async function getContestByShareId(shareId: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(namingContests).where(eq(namingContests.shareId, shareId)).limit(1);
+  return result[0];
+}
+
+/**
+ * Get a naming contest by ID (owner access).
+ */
+export async function getContest(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(namingContests).where(eq(namingContests.id, id)).limit(1);
+  return result[0];
+}
+
+/**
+ * List contests for a user.
+ */
+export async function listContests(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(namingContests).where(eq(namingContests.userId, userId)).orderBy(desc(namingContests.createdAt));
+}
+
+/**
+ * Record a vote on a contest.
+ */
+export async function castVote(data: InsertContestVote) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Check for duplicate vote
+  const existing = await db.select().from(contestVotes)
+    .where(and(
+      eq(contestVotes.contestId, data.contestId),
+      eq(contestVotes.voterFingerprint, data.voterFingerprint)
+    ))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return { id: existing[0].id, duplicate: true };
+  }
+
+  const result = await db.insert(contestVotes).values(data);
+
+  // Increment total votes on the contest
+  await db.update(namingContests)
+    .set({ totalVotes: sql`${namingContests.totalVotes} + 1` })
+    .where(eq(namingContests.id, data.contestId));
+
+  return { id: result[0].insertId, duplicate: false };
+}
+
+/**
+ * Get vote results for a contest.
+ */
+export async function getContestResults(contestId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const votes = await db.select({
+    candidateId: contestVotes.candidateId,
+    count: sql<number>`count(*)`,
+  })
+    .from(contestVotes)
+    .where(eq(contestVotes.contestId, contestId))
+    .groupBy(contestVotes.candidateId);
+
+  return votes.map(v => ({
+    candidateId: v.candidateId,
+    votes: Number(v.count),
+  }));
+}
+
+/**
+ * Get recent comments/votes for a contest.
+ */
+export async function getContestComments(contestId: number, limit = 50) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select({
+    id: contestVotes.id,
+    candidateId: contestVotes.candidateId,
+    voterName: contestVotes.voterName,
+    comment: contestVotes.comment,
+    createdAt: contestVotes.createdAt,
+  })
+    .from(contestVotes)
+    .where(and(eq(contestVotes.contestId, contestId), sql`${contestVotes.comment} IS NOT NULL AND ${contestVotes.comment} != ''`))
+    .orderBy(desc(contestVotes.createdAt))
+    .limit(limit);
+}
+
+/**
+ * Increment view count for a contest.
+ */
+export async function incrementContestViews(contestId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(namingContests)
+    .set({ totalViews: sql`${namingContests.totalViews} + 1` })
+    .where(eq(namingContests.id, contestId));
+}
+
+/**
+ * Close a contest.
+ */
+export async function closeContest(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.update(namingContests).set({ status: "closed" }).where(eq(namingContests.id, id));
 }

@@ -19,6 +19,16 @@ export const users = mysqlTable("users", {
   email: varchar("email", { length: 320 }),
   loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  /** Subscription tier: explorer (free), founder ($49/mo), governance ($299/mo), enterprise ($1500+/mo) */
+  subscriptionTier: mysqlEnum("subscriptionTier", ["explorer", "founder", "governance", "enterprise"]).default("explorer").notNull(),
+  /** Number of reports/executions used this billing period */
+  reportCount: int("reportCount").default(0).notNull(),
+  /** Billing period start (resets reportCount monthly) */
+  billingPeriodStart: timestamp("billingPeriodStart"),
+  /** Stripe customer ID for paid tiers */
+  stripeCustomerId: varchar("stripeCustomerId", { length: 255 }),
+  /** Stripe subscription ID */
+  stripeSubscriptionId: varchar("stripeSubscriptionId", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -265,3 +275,57 @@ export const proofguardAttestations = mysqlTable("proofguard_attestations", {
 
 export type ProofguardAttestation = typeof proofguardAttestations.$inferSelect;
 export type InsertProofguardAttestation = typeof proofguardAttestations.$inferInsert;
+
+// ─── Naming Contest (Viral Loop) ────────────────────────────────────────
+
+/**
+ * Naming contests — shareable polls where founders crowdsource brand name decisions.
+ * Each contest has a unique shareId for public access without authentication.
+ */
+export const namingContests = mysqlTable("naming_contests", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Owner of the contest */
+  userId: int("userId").notNull(),
+  /** Unique share identifier for public URLs */
+  shareId: varchar("shareId", { length: 32 }).notNull().unique(),
+  /** Contest title */
+  title: varchar("title", { length: 255 }).notNull(),
+  /** Optional description / context for voters */
+  description: text("description"),
+  /** JSON array of candidate options: [{ id, name, tagline, scores }] */
+  candidates: json("candidates").notNull(),
+  /** Contest status */
+  status: mysqlEnum("status", ["active", "closed", "archived"]).default("active").notNull(),
+  /** Total votes cast */
+  totalVotes: int("totalVotes").default(0).notNull(),
+  /** Total unique visitors */
+  totalViews: int("totalViews").default(0).notNull(),
+  /** When the contest closes (null = no deadline) */
+  closesAt: timestamp("closesAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type NamingContest = typeof namingContests.$inferSelect;
+export type InsertNamingContest = typeof namingContests.$inferInsert;
+
+/**
+ * Contest votes — one vote per visitor per contest.
+ * Tracks voter fingerprint (IP hash + UA) to prevent duplicate votes without requiring auth.
+ */
+export const contestVotes = mysqlTable("contest_votes", {
+  id: int("id").autoincrement().primaryKey(),
+  contestId: int("contestId").notNull(),
+  /** Which candidate was voted for */
+  candidateId: varchar("candidateId", { length: 64 }).notNull(),
+  /** Voter fingerprint (hash of IP + user-agent) for dedup */
+  voterFingerprint: varchar("voterFingerprint", { length: 128 }).notNull(),
+  /** Optional voter name (if they choose to identify) */
+  voterName: varchar("voterName", { length: 128 }),
+  /** Optional comment with the vote */
+  comment: text("comment"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ContestVote = typeof contestVotes.$inferSelect;
+export type InsertContestVote = typeof contestVotes.$inferInsert;

@@ -20,6 +20,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  Crown,
+  Target,
+  Trophy,
+  Film,
+  Receipt,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -43,6 +48,11 @@ const navItems: NavItem[] = [
   { label: "Agents", href: "/agents", icon: <Bot size={18} />, section: "Intelligence" },
   { label: "Configuration", href: "/config", icon: <Settings size={18} />, section: "System" },
   { label: "Brand Architect", href: "/brand", icon: <Palette size={18} />, section: "System" },
+  { label: "Founder Score", href: "/founder-score", icon: <Target size={18} />, section: "Intelligence" },
+  { label: "Naming Contest", href: "/contests", icon: <Trophy size={18} />, section: "System" },
+  { label: "Documentary", href: "/documentary", icon: <Film size={18} />, section: "System" },
+  { label: "Pricing", href: "/pricing", icon: <Crown size={18} />, section: "System" },
+  { label: "Payments", href: "/payments", icon: <Receipt size={18} />, section: "System" },
 ];
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {

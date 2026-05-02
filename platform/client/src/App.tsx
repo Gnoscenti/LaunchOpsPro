@@ -21,7 +21,14 @@ import TrustScore from "./pages/TrustScore";
 import Agents from "./pages/Agents";
 import Configuration from "./pages/Configuration";
 import BrandArchitect from "./pages/BrandArchitect";
-function Router() {
+import Pricing from "./pages/Pricing";
+import FounderScore from "./pages/FounderScore";
+import NamingContest from "./pages/NamingContest";
+import VotePage from "./pages/VotePage";
+import Documentary from "./pages/Documentary";
+import PaymentHistory from "./pages/PaymentHistory";
+
+function DashboardRouter() {
   // make sure to consider if you need authentication for certain routes
   return (
     <DashboardLayout>
@@ -37,6 +44,11 @@ function Router() {
         <Route path="/agents" component={Agents} />
         <Route path="/config" component={Configuration} />
         <Route path="/brand" component={BrandArchitect} />
+        <Route path="/pricing" component={Pricing} />
+        <Route path="/founder-score" component={FounderScore} />
+        <Route path="/contests" component={NamingContest} />
+        <Route path="/documentary" component={Documentary} />
+        <Route path="/payments" component={PaymentHistory} />
         <Route path="/404" component={NotFound} />
         <Route component={NotFound} />
       </Switch>
@@ -50,7 +62,12 @@ function App() {
       <ThemeProvider defaultTheme="dark">
         <TooltipProvider>
           <Toaster />
-          <Router />
+          <Switch>
+            {/* Public vote page — no sidebar, no auth required */}
+            <Route path="/vote/:shareId" component={VotePage} />
+            {/* All other routes go through the dashboard layout */}
+            <Route component={DashboardRouter} />
+          </Switch>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

@@ -1,13 +1,26 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, adminProcedure, router } from "./_core/trpc";
+import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import * as db from "./db";
 import { listAgents, getAgent, findAgentsByCapability, findAgentsByCategory, getRegistryStats } from "./agentRegistry";
 import { getProviderHealth, getRoutingStats, getModelForAgent, getAvailableProviders } from "./llmRouter";
 import type { AgentCapability } from "./agentRegistry";
 import { ProofGuard } from "./proofguard";
+import {
+  TIER_CONFIGS,
+  type SubscriptionTier,
+  getReportQuotaInfo,
+  canAccessAgent,
+  canUseProofGuard,
+  canUseHITL,
+  canExportCompliance,
+  getUpgradeSuggestion,
+  hasReportQuota,
+} from "./subscriptionTiers";
+
 
 // ─── Workflow Router ─────────────────────────────────────────────────────
 
@@ -556,6 +569,204 @@ const proofguardRouter = router({
     }),
 });
 
+// ─── Subscription Router ────────────────────────────────────────────────
+
+const subscriptionRouter = router({
+  /** Get current user's subscription info + quota */
+  current: protectedProcedure.query(async ({ ctx }) => {
+    const sub = await db.getUserSubscription(ctx.user.id);
+    const tier = (sub?.subscriptionTier ?? 'explorer') as SubscriptionTier;
+    const config = TIER_CONFIGS[tier];
+    const usage = await db.getReportUsage(ctx.user.id);
+    const quota = getReportQuotaInfo(tier, usage.used);
+
+    return {
+      tier,
+      tierConfig: config,
+      quota,
+      stripeCustomerId: sub?.stripeCustomerId ?? null,
+      stripeSubscriptionId: sub?.stripeSubscriptionId ?? null,
+    };
+  }),
+
+  /** Get all available tiers for pricing page */
+  tiers: publicProcedure.query(() => {
+    return Object.values(TIER_CONFIGS);
+  }),
+
+  /** Check if user can access a specific feature */
+  checkAccess: protectedProcedure
+    .input(z.object({
+      feature: z.enum(['proofguard', 'hitl', 'compliance-export', 'unlimited-reports', 'all-agents']),
+      agentId: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const sub = await db.getUserSubscription(ctx.user.id);
+      const tier = (sub?.subscriptionTier ?? 'explorer') as SubscriptionTier;
+
+      let allowed = false;
+      switch (input.feature) {
+        case 'proofguard': allowed = canUseProofGuard(tier); break;
+        case 'hitl': allowed = canUseHITL(tier); break;
+        case 'compliance-export': allowed = canExportCompliance(tier); break;
+        case 'unlimited-reports': allowed = TIER_CONFIGS[tier].reportLimit === -1; break;
+        case 'all-agents': allowed = TIER_CONFIGS[tier].agentAccess !== 'basic'; break;
+      }
+
+      if (input.agentId) {
+        allowed = allowed && canAccessAgent(tier, input.agentId);
+      }
+
+      const upgrade = !allowed ? getUpgradeSuggestion(tier, input.feature) : null;
+
+      return { allowed, currentTier: tier, upgrade };
+    }),
+
+  /** Check report quota before execution */
+  checkQuota: protectedProcedure.query(async ({ ctx }) => {
+    const usage = await db.getReportUsage(ctx.user.id);
+    const tier = usage.tier as SubscriptionTier;
+    const quota = getReportQuotaInfo(tier, usage.used);
+    const canRun = hasReportQuota(tier, usage.used);
+    const upgrade = !canRun ? getUpgradeSuggestion(tier, 'unlimited reports') : null;
+
+    return { canRun, quota, tier, upgrade };
+  }),
+
+  /** Consume a report (called when execution starts) */
+  consumeReport: protectedProcedure.mutation(async ({ ctx }) => {
+    const usage = await db.getReportUsage(ctx.user.id);
+    const tier = usage.tier as SubscriptionTier;
+
+    if (!hasReportQuota(tier, usage.used)) {
+      const upgrade = getUpgradeSuggestion(tier, 'unlimited reports');
+      return { success: false, reason: 'quota_exhausted', upgrade };
+    }
+
+    const newCount = await db.incrementReportCount(ctx.user.id);
+    const quota = getReportQuotaInfo(tier, newCount);
+    return { success: true, quota };
+  }),
+
+  /** Create a Stripe Checkout Session for subscription upgrade */
+  createCheckout: protectedProcedure
+    .input(z.object({
+      tierId: z.enum(['founder', 'governance', 'enterprise']),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { getStripePriceId, getOrCreateStripeCustomer, stripe } = await import('./stripeProducts');
+      const priceId = await getStripePriceId(input.tierId);
+
+      // Get or create Stripe customer
+      const sub = await db.getUserSubscription(ctx.user.id);
+      const stripeCustomerId = await getOrCreateStripeCustomer({
+        id: ctx.user.id,
+        email: ctx.user.email,
+        name: ctx.user.name,
+        stripeCustomerId: sub?.stripeCustomerId,
+      });
+
+      // Save customer ID if new
+      if (!sub?.stripeCustomerId) {
+        await db.updateUserStripeCustomerId(ctx.user.id, stripeCustomerId);
+      }
+
+      const origin = ctx.req.headers.origin || ctx.req.headers.referer?.replace(/\/$/, '') || '';
+
+      const session = await stripe.checkout.sessions.create({
+        customer: stripeCustomerId,
+        mode: 'subscription',
+        line_items: [{ price: priceId, quantity: 1 }],
+        success_url: `${origin}/pricing?success=true&session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/pricing?canceled=true`,
+        client_reference_id: ctx.user.id.toString(),
+        metadata: {
+          user_id: ctx.user.id.toString(),
+          customer_email: ctx.user.email || '',
+          customer_name: ctx.user.name || '',
+          tier_id: input.tierId,
+        },
+        allow_promotion_codes: true,
+        subscription_data: {
+          metadata: {
+            user_id: ctx.user.id.toString(),
+            tier_id: input.tierId,
+          },
+        },
+      });
+
+      return { checkoutUrl: session.url };
+    }),
+
+  /** Create a Stripe Customer Portal session for subscription management */
+  createPortalSession: protectedProcedure.mutation(async ({ ctx }) => {
+    const { stripe } = await import('./stripeProducts');
+    const sub = await db.getUserSubscription(ctx.user.id);
+
+    if (!sub?.stripeCustomerId) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'No Stripe customer found. Subscribe to a plan first.',
+      });
+    }
+
+    const origin = ctx.req.headers.origin || ctx.req.headers.referer?.replace(/\/$/, '') || '';
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: sub.stripeCustomerId,
+      return_url: `${origin}/pricing`,
+    });
+
+    return { portalUrl: session.url };
+  }),
+
+  /** Get payment history from Stripe */
+  paymentHistory: protectedProcedure.query(async ({ ctx }) => {
+    const sub = await db.getUserSubscription(ctx.user.id);
+    if (!sub?.stripeCustomerId) {
+      return { invoices: [] };
+    }
+
+    try {
+      const { stripe } = await import('./stripeProducts');
+      const invoices = await stripe.invoices.list({
+        customer: sub.stripeCustomerId,
+        limit: 20,
+      });
+
+      return {
+        invoices: invoices.data.map((inv) => ({
+          id: inv.id,
+          number: inv.number,
+          status: inv.status,
+          amountDue: inv.amount_due,
+          amountPaid: inv.amount_paid,
+          currency: inv.currency,
+          created: inv.created * 1000, // convert to ms
+          periodStart: inv.period_start ? inv.period_start * 1000 : null,
+          periodEnd: inv.period_end ? inv.period_end * 1000 : null,
+          hostedInvoiceUrl: inv.hosted_invoice_url,
+          invoicePdf: inv.invoice_pdf,
+        })),
+      };
+    } catch (err) {
+      console.error('[Subscription] Failed to fetch invoices:', err);
+      return { invoices: [] };
+    }
+  }),
+
+  /** Admin: set a user's tier (for manual upgrades or testing) */
+  setTier: adminProcedure
+    .input(z.object({
+      userId: z.number(),
+      tier: z.enum(['explorer', 'founder', 'governance', 'enterprise']),
+    }))
+    .mutation(async ({ input }) => {
+      await db.updateUserTier(input.userId, input.tier);
+      return { success: true, userId: input.userId, tier: input.tier };
+    }),
+});
+
 // ─── Agent Registry Router ──────────────────────────────────────────────
 
 const agentRegistryRouter = router({
@@ -756,6 +967,124 @@ const logRouter = router({
     }),
 });
 
+// ─── Naming Contest Router ──────────────────────────────────────────────
+
+import crypto from "crypto";
+
+const contestRouter = router({
+  /** Create a new naming contest */
+  create: protectedProcedure
+    .input(z.object({
+      title: z.string().min(1).max(255),
+      description: z.string().optional(),
+      candidates: z.array(z.object({
+        id: z.string(),
+        name: z.string(),
+        tagline: z.string().optional(),
+        scores: z.record(z.string(), z.number()).optional(),
+      })).min(2).max(10),
+      closesAt: z.date().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const shareId = crypto.randomBytes(12).toString("base64url");
+      const result = await db.createNamingContest({
+        userId: ctx.user.id,
+        shareId,
+        title: input.title,
+        description: input.description ?? null,
+        candidates: input.candidates,
+        closesAt: input.closesAt ?? null,
+      });
+      return { id: result.id, shareId };
+    }),
+
+  /** List user's contests */
+  list: protectedProcedure.query(async ({ ctx }) => {
+    return db.listContests(ctx.user.id);
+  }),
+
+  /** Get contest by shareId (public — no auth required) */
+  getByShareId: publicProcedure
+    .input(z.object({ shareId: z.string() }))
+    .query(async ({ input }) => {
+      const contest = await db.getContestByShareId(input.shareId);
+      if (!contest) throw new Error("Contest not found");
+
+      // Increment views
+      await db.incrementContestViews(contest.id);
+
+      // Get vote results
+      const results = await db.getContestResults(contest.id);
+      const comments = await db.getContestComments(contest.id);
+
+      return {
+        ...contest,
+        results,
+        comments,
+      };
+    }),
+
+  /** Cast a vote (public — fingerprint-based dedup) */
+  vote: publicProcedure
+    .input(z.object({
+      shareId: z.string(),
+      candidateId: z.string(),
+      voterName: z.string().optional(),
+      comment: z.string().optional(),
+      fingerprint: z.string(),
+    }))
+    .mutation(async ({ input }) => {
+      const contest = await db.getContestByShareId(input.shareId);
+      if (!contest) throw new Error("Contest not found");
+      if (contest.status !== "active") throw new Error("Contest is closed");
+
+      const result = await db.castVote({
+        contestId: contest.id,
+        candidateId: input.candidateId,
+        voterFingerprint: input.fingerprint,
+        voterName: input.voterName ?? null,
+        comment: input.comment ?? null,
+      });
+
+      if (result.duplicate) {
+        return { success: false, reason: "already_voted" };
+      }
+
+      // Get updated results
+      const results = await db.getContestResults(contest.id);
+      return { success: true, results };
+    }),
+
+  /** Close a contest (owner only) */
+  close: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const contest = await db.getContest(input.id);
+      if (!contest) throw new Error("Contest not found");
+      if (contest.userId !== ctx.user.id) throw new Error("Not authorized");
+      await db.closeContest(input.id);
+      return { success: true };
+    }),
+
+  /** Get results for a contest (owner only) */
+  results: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const contest = await db.getContest(input.id);
+      if (!contest) throw new Error("Contest not found");
+      if (contest.userId !== ctx.user.id) throw new Error("Not authorized");
+
+      const results = await db.getContestResults(contest.id);
+      const comments = await db.getContestComments(contest.id);
+
+      return {
+        contest,
+        results,
+        comments,
+      };
+    }),
+});
+
 // ─── Main App Router ─────────────────────────────────────────────────────
 
 export const appRouter = router({
@@ -778,6 +1107,8 @@ export const appRouter = router({
   agentRegistry: agentRegistryRouter,
   dashboard: dashboardRouter,
   proofguard: proofguardRouter,
+  subscription: subscriptionRouter,
+  contest: contestRouter,
 });
 
 export type AppRouter = typeof appRouter;

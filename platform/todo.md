@@ -81,11 +81,32 @@
 - [x] Wire Stripe secret to Credential Vault (validate key, update Trust Score)
 - [x] Wire GitHub token to Credential Vault (validate, update Trust Score)
 - [x] Integrate ProofGuard governance (CQS scoring + HITL approval gates) — 20/20 attestations in pipeline run
-- [ ] Build revenue tiering system (Explorer free / Founder $49 / Governance $299 / Enterprise $1500+)
-- [ ] Build Founder Score lead magnet (Trust Score gap analysis at end of naming flow)
-- [ ] Build Naming Contest viral loop (shareable poll endpoint + social decision poll)
-- [ ] Add Documentary Tracker social automation (Success Story template for X/LinkedIn)
+- [x] Build revenue tiering system (Explorer free / Founder $49 / Governance $299 / Enterprise $1500+)
+- [x] Build Founder Score lead magnet (Trust Score gap analysis at end of naming flow)
+- [x] Build Naming Contest viral loop (shareable poll endpoint + social decision poll)
+- [x] Add Documentary Tracker social automation (Success Story template for X/LinkedIn)
 - [x] Add proofguard_attestations table to DB schema (immutable audit trail)
 - [x] Wire ProofGuard to persist every attestation + HITL decision + proof hash to DB
 - [x] Add tRPC endpoints to query persistent attestation history (stats, attestations, forExecution)
 - [x] Verify attestations survive server restarts — 20 attestations persisted in DB after pipeline run
+- [x] Subscription tier DB schema (subscriptionTier, reportCount, subscriptionStartedAt, subscriptionExpiresAt)
+- [x] Tier-gating tRPC middleware (founderProcedure, governanceProcedure, enterpriseProcedure)
+- [x] Subscription management tRPC router (currentTier, reportQuota, upgradeSuggestion, checkAccess, incrementReport, setTier)
+- [x] Pricing page with 4-tier comparison, feature lists, and upgrade CTAs
+- [x] Founder Score page: 8-dimension gap analysis with real Trust Score data + locked feature indicators
+- [x] Naming Contest: DB schema (contests, contest_candidates, contest_votes), tRPC router, create/vote/results/close
+- [x] Naming Contest: public voting page at /vote/:shareId with fingerprint dedup + share-after-vote CTA
+- [x] Documentary Tracker: 6 story templates (Launch Milestone, Trust Score Update, Governance Proof, Growth Narrative, Investor-Ready Summary, Weekly Update)
+- [x] Documentary Tracker: live data integration from Trust Score + Dashboard + ProofGuard stats
+- [x] Documentary Tracker: editable content, Twitter/LinkedIn share buttons, character count indicator
+- [x] Vitest: 115 tests passing across 6 test files (revenueFeatures, subscriptionTiers, agentPipeline, routers, auth, credentials)
+- [x] Add Stripe feature to project (webdev_add_feature)
+- [x] Create Stripe products and prices for 4 subscription tiers
+- [x] Build Stripe Checkout Session API (create checkout, handle success/cancel)
+- [x] Build Stripe webhook handler (subscription lifecycle: created, updated, deleted, payment_failed)
+- [x] Wire Pricing page CTAs to Stripe Checkout Sessions
+- [x] Add Stripe Customer Portal for self-service subscription management
+- [x] Sync Stripe subscription status to DB subscriptionTier field
+- [x] Write vitest tests for Stripe integration (23 tests)
+- [x] Payment History page: invoice list from Stripe API with status badges, amounts, PDF download, hosted invoice links
+- [x] Vitest: 138 tests passing across 7 test files (stripeIntegration, revenueFeatures, subscriptionTiers, agentPipeline, routers, auth, credentials)

@@ -22,6 +22,20 @@
       "when": 1777726147207,
       "tag": "0002_nappy_hedge_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1777727437321,
+      "tag": "0003_long_sentinels",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1777727858205,
+      "tag": "0004_little_captain_cross",
+      "breakpoints": true
     }
   ]
 }
