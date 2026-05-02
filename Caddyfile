@@ -1,0 +1,19 @@
+{
+    email {$CADDY_EMAIL}
+}
+
+{$DOMAIN_NAME} {
+    # Route API requests to the Python backend
+    handle /api/* {
+        reverse_proxy python-backend:8001
+    }
+    
+    handle /atlas/* {
+        reverse_proxy python-backend:8001
+    }
+
+    # Route everything else to the Node.js platform
+    handle {
+        reverse_proxy platform:5000
+    }
+}

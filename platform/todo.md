@@ -119,3 +119,7 @@
   - Gateway Token: `6pUyk82skXQrbe6TBeOM`
   - Default Session Key: `agent:main:main`
 - [ ] Prepare Vultr deployment scripts (`deploy.sh` and update `docker-compose.yml`)
+
+- [ ] Add Caddy to docker-compose.yml for automatic HTTPS
+- [ ] Create Caddyfile configuration
+- [ ] Update vultr_deploy.sh to prompt for domain and configure Caddy
