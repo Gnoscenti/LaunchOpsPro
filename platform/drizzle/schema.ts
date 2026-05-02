@@ -216,3 +216,52 @@ export const executionLogs = mysqlTable("execution_logs", {
 
 export type ExecutionLog = typeof executionLogs.$inferSelect;
 export type InsertExecutionLog = typeof executionLogs.$inferInsert;
+
+/**
+ * ProofGuard attestations — immutable audit trail for every governance decision.
+ * Every agent execution is attested with a CQS score, risk tier, and verdict.
+ * HITL decisions are recorded with approver identity and reasoning.
+ * This table is append-only and serves as legal/compliance evidence.
+ */
+export const proofguardAttestations = mysqlTable("proofguard_attestations", {
+  id: int("id").autoincrement().primaryKey(),
+  /** Unique attestation identifier (att_xxxx) */
+  attestationId: varchar("attestationId", { length: 64 }).notNull().unique(),
+  /** Link to the execution */
+  executionId: int("executionId"),
+  /** Link to the step */
+  stepId: int("stepId"),
+  /** Agent that was attested */
+  agentId: varchar("agentId", { length: 128 }).notNull(),
+  /** Agent display label */
+  agentLabel: varchar("agentLabel", { length: 255 }),
+  /** Confidence-Quality Score (0-100) */
+  cqsScore: int("cqsScore").notNull(),
+  /** Risk tier classification */
+  riskTier: mysqlEnum("riskTier", ["low", "medium", "high", "critical"]).notNull(),
+  /** Governance verdict */
+  status: mysqlEnum("status", ["APPROVED", "BLOCKED", "REQUIRES_HITL", "REJECTED"]).notNull(),
+  /** Human-readable reason for the verdict */
+  reason: text("reason").notNull(),
+  /** Whether any guardrails were triggered */
+  flagged: boolean("flagged").default(false).notNull(),
+  /** JSON array of triggered guardrail IDs (e.g., ["GR-001", "GR-003"]) */
+  guardrailsTriggered: json("guardrailsTriggered"),
+  /** Execution result summary (populated after agent completes) */
+  executionSuccess: boolean("executionSuccess"),
+  executionCompletedAt: timestamp("executionCompletedAt"),
+  resultSummary: text("resultSummary"),
+  /** HITL decision fields (populated only when status = REQUIRES_HITL) */
+  hitlDecision: mysqlEnum("hitlDecision", ["pending", "approved", "rejected"]),
+  hitlDecidedBy: varchar("hitlDecidedBy", { length: 255 }),
+  hitlDecidedAt: timestamp("hitlDecidedAt"),
+  hitlReason: text("hitlReason"),
+  /** Proof hash of the attested output */
+  proofHash: varchar("proofHash", { length: 128 }),
+  /** Timestamp of attestation (milliseconds since epoch for precision) */
+  attestedAt: timestamp("attestedAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ProofguardAttestation = typeof proofguardAttestations.$inferSelect;
+export type InsertProofguardAttestation = typeof proofguardAttestations.$inferInsert;

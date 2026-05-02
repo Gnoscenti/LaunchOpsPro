@@ -10,6 +10,7 @@ import {
   workflowTemplates,
   credentials,
   executionLogs,
+  proofguardAttestations,
   type InsertWorkflow,
   type InsertWorkflowStep,
   type InsertExecution,
@@ -17,6 +18,7 @@ import {
   type InsertWorkflowTemplate,
   type InsertCredential,
   type InsertExecutionLog,
+  type InsertProofguardAttestation,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -510,4 +512,116 @@ export async function getWorkflowsWithStepCounts(userId: number) {
       };
     })
   );
+}
+
+// ─── ProofGuard Attestation Persistence ─────────────────────────────────
+
+/**
+ * Persist a ProofGuard attestation to the database (append-only, immutable).
+ */
+export async function persistAttestation(data: InsertProofguardAttestation): Promise<void> {
+  const db = await getDb();
+  if (!db) { console.warn("[ProofGuard] Cannot persist attestation: database not available"); return; }
+  try {
+    await db.insert(proofguardAttestations).values(data);
+  } catch (error) {
+    console.error("[ProofGuard] Failed to persist attestation:", error);
+  }
+}
+
+/**
+ * Update attestation with execution result (after agent completes).
+ */
+export async function updateAttestationResult(
+  attestationId: string,
+  success: boolean,
+  resultSummary?: string,
+  proofHash?: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.update(proofguardAttestations)
+      .set({
+        executionSuccess: success,
+        executionCompletedAt: new Date(),
+        resultSummary: resultSummary ?? (success ? "Completed successfully" : "Execution failed"),
+        proofHash: proofHash ?? undefined,
+      })
+      .where(eq(proofguardAttestations.attestationId, attestationId));
+  } catch (error) {
+    console.error("[ProofGuard] Failed to update attestation result:", error);
+  }
+}
+
+/**
+ * Update attestation with HITL decision.
+ */
+export async function updateAttestationHITL(
+  attestationId: string,
+  decision: "approved" | "rejected",
+  decidedBy: string,
+  reason?: string
+): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.update(proofguardAttestations)
+      .set({
+        hitlDecision: decision,
+        hitlDecidedBy: decidedBy,
+        hitlDecidedAt: new Date(),
+        hitlReason: reason ?? `${decision} by ${decidedBy}`,
+        status: decision === "approved" ? "APPROVED" : "REJECTED",
+      })
+      .where(eq(proofguardAttestations.attestationId, attestationId));
+  } catch (error) {
+    console.error("[ProofGuard] Failed to update HITL decision:", error);
+  }
+}
+
+/**
+ * List all attestations (newest first) with optional limit.
+ */
+export async function listAttestations(limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(proofguardAttestations).orderBy(desc(proofguardAttestations.createdAt)).limit(limit);
+}
+
+/**
+ * Get attestation stats from the persistent store.
+ */
+export async function getAttestationStats() {
+  const db = await getDb();
+  if (!db) return { total: 0, approved: 0, blocked: 0, rejected: 0, pendingHitl: 0, avgCqs: 0, flagged: 0 };
+
+  const [totalRow] = await db.select({ count: sql<number>`count(*)` }).from(proofguardAttestations);
+  const [approvedRow] = await db.select({ count: sql<number>`count(*)` }).from(proofguardAttestations).where(eq(proofguardAttestations.status, "APPROVED"));
+  const [blockedRow] = await db.select({ count: sql<number>`count(*)` }).from(proofguardAttestations).where(eq(proofguardAttestations.status, "BLOCKED"));
+  const [rejectedRow] = await db.select({ count: sql<number>`count(*)` }).from(proofguardAttestations).where(eq(proofguardAttestations.status, "REJECTED"));
+  const [hitlRow] = await db.select({ count: sql<number>`count(*)` }).from(proofguardAttestations).where(eq(proofguardAttestations.status, "REQUIRES_HITL"));
+  const [flaggedRow] = await db.select({ count: sql<number>`count(*)` }).from(proofguardAttestations).where(eq(proofguardAttestations.flagged, true));
+  const [avgRow] = await db.select({ avg: sql<number>`COALESCE(AVG(cqsScore), 0)` }).from(proofguardAttestations);
+
+  return {
+    total: Number(totalRow?.count ?? 0),
+    approved: Number(approvedRow?.count ?? 0),
+    blocked: Number(blockedRow?.count ?? 0),
+    rejected: Number(rejectedRow?.count ?? 0),
+    pendingHitl: Number(hitlRow?.count ?? 0),
+    avgCqs: Math.round(Number(avgRow?.avg ?? 0)),
+    flagged: Number(flaggedRow?.count ?? 0),
+  };
+}
+
+/**
+ * Get attestations for a specific execution.
+ */
+export async function getAttestationsForExecution(executionId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(proofguardAttestations)
+    .where(eq(proofguardAttestations.executionId, executionId))
+    .orderBy(proofguardAttestations.createdAt);
 }

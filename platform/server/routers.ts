@@ -7,6 +7,7 @@ import * as db from "./db";
 import { listAgents, getAgent, findAgentsByCapability, findAgentsByCategory, getRegistryStats } from "./agentRegistry";
 import { getProviderHealth, getRoutingStats, getModelForAgent, getAvailableProviders } from "./llmRouter";
 import type { AgentCapability } from "./agentRegistry";
+import { ProofGuard } from "./proofguard";
 
 // ─── Workflow Router ─────────────────────────────────────────────────────
 
@@ -429,6 +430,130 @@ const credentialRouter = router({
       await db.deleteCredential(input.id);
       return { success: true };
     }),
+
+  /** Auto-seed credentials from environment variables (Stripe, GitHub) */
+  seedFromEnv: protectedProcedure.mutation(async ({ ctx }) => {
+    const seeded: string[] = [];
+    const envCredentials = [
+      {
+        keyName: "STRIPE_SECRET_KEY",
+        envVar: "STRIPE_SECRET_KEY",
+        service: "stripe",
+        description: "Stripe API secret key for payment processing",
+      },
+      {
+        keyName: "GITHUB_TOKEN",
+        envVar: "GITHUB_TOKEN",
+        service: "github",
+        description: "GitHub personal access token for repository operations",
+      },
+    ];
+
+    for (const cred of envCredentials) {
+      const value = process.env[cred.envVar];
+      if (value) {
+        const encryptedValue = Buffer.from(value).toString("base64");
+        await db.upsertCredential({
+          userId: ctx.user.id,
+          keyName: cred.keyName,
+          encryptedValue,
+          service: cred.service,
+          description: cred.description,
+        });
+        seeded.push(cred.keyName);
+      }
+    }
+
+    return { seeded, count: seeded.length };
+  }),
+
+  /** Validate a credential by testing the API connection */
+  validate: protectedProcedure
+    .input(z.object({ keyName: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const creds = await db.listCredentialsWithValues(ctx.user.id);
+      const cred = creds.find((c) => c.keyName === input.keyName);
+      if (!cred) throw new Error("Credential not found");
+
+      const value = Buffer.from(cred.encryptedValue, "base64").toString("utf-8");
+
+      try {
+        if (cred.service === "stripe" || input.keyName.includes("STRIPE")) {
+          const res = await fetch("https://api.stripe.com/v1/balance", {
+            headers: { Authorization: `Bearer ${value}` },
+          });
+          return { valid: res.ok, service: "stripe", status: res.status };
+        }
+
+        if (cred.service === "github" || input.keyName.includes("GITHUB")) {
+          const res = await fetch("https://api.github.com/user", {
+            headers: { Authorization: `Bearer ${value}`, "User-Agent": "LaunchOps" },
+          });
+          return { valid: res.ok, service: "github", status: res.status };
+        }
+
+        return { valid: true, service: "unknown", status: 200 };
+      } catch (err) {
+        return { valid: false, service: cred.service ?? "unknown", error: String(err) };
+      }
+    }),
+});
+
+// ─── ProofGuard Router ─────────────────────────────────────────────
+
+const proofguardRouter = router({
+  stats: protectedProcedure.query(async () => {
+    // Merge in-memory stats with persistent DB stats
+    const memStats = ProofGuard.getStats();
+    const dbStats = await db.getAttestationStats();
+    return {
+      ...memStats,
+      persistent: dbStats,
+      totalAllTime: dbStats.total,
+    };
+  }),
+
+  attestations: protectedProcedure
+    .input(z.object({ limit: z.number().optional() }).optional())
+    .query(async ({ input }) => {
+      // Return persistent attestations from DB (survives restarts)
+      const limit = input?.limit ?? 100;
+      return db.listAttestations(limit);
+    }),
+
+  forExecution: protectedProcedure
+    .input(z.object({ executionId: z.number() }))
+    .query(async ({ input }) => {
+      return db.getAttestationsForExecution(input.executionId);
+    }),
+
+  pendingHitl: protectedProcedure.query(() => {
+    return ProofGuard.listPendingHITL();
+  }),
+
+  approveHitl: protectedProcedure
+    .input(z.object({ attestationId: z.string(), reason: z.string().optional() }))
+    .mutation(({ ctx, input }) => {
+      const success = ProofGuard.approveHITL(
+        input.attestationId,
+        ctx.user.name ?? "owner",
+        input.reason
+      );
+      if (!success) throw new Error("Cannot approve — decision not found or already resolved");
+      return { success: true, attestationId: input.attestationId, status: "approved" };
+    }),
+
+  rejectHitl: protectedProcedure
+    .input(z.object({ attestationId: z.string(), reason: z.string().optional() }))
+    .mutation(({ ctx, input }) => {
+      const success = ProofGuard.rejectHITL(
+        input.attestationId,
+        ctx.user.name ?? "owner",
+        input.reason
+      );
+      if (!success) throw new Error("Cannot reject — decision not found or already resolved");
+      return { success: true, attestationId: input.attestationId, status: "rejected" };
+    }),
 });
 
 // ─── Agent Registry Router ──────────────────────────────────────────────
@@ -652,6 +777,7 @@ export const appRouter = router({
   log: logRouter,
   agentRegistry: agentRegistryRouter,
   dashboard: dashboardRouter,
+  proofguard: proofguardRouter,
 });
 
 export type AppRouter = typeof appRouter;

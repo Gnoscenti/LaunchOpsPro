@@ -56,6 +56,7 @@ import {
   clearContext,
 } from "./contextChain";
 import { saveArtifact, listExecutionArtifacts } from "./artifactStore";
+import { proofguard, ProofGuard, type AttestationResult } from "./proofguard";
 
 const executionRouter = Router();
 
@@ -245,7 +246,90 @@ executionRouter.post("/api/execute/:executionId/run", async (req: Request, res: 
         message: `Starting: ${agentName} (${step.agentId}) — context: ${contextSnapshot.estimatedTokens} tokens`,
       });
 
+      let attestation: AttestationResult | null = null;
+
       try {
+        // ─── ProofGuard Governance Gate ────────────────────────────
+        const riskTier = agentDef?.requiredSecrets?.length
+          ? (agentDef.requiredSecrets.length > 2 ? "high" : "medium")
+          : "low";
+
+        attestation = await proofguard.attestAction({
+          agentId: step.agentId,
+          agentName: agentName,
+          pipelineStage: step.label,
+          action: `execute_${step.agentId}`,
+          actionJson: {
+            executionId,
+            stepId: step.id,
+            config: step.config,
+            description: step.description,
+            executionMode: agentMode,
+            credentials: Object.fromEntries(
+              userCredentials.map((c) => [c.keyName, "***"])
+            ),
+          },
+          riskTier: riskTier as "low" | "medium" | "high" | "critical",
+          imdaPillar: "Operations Management",
+        });
+
+        sendSSE(executionId, {
+          type: "proofguard_verdict",
+          message: `ProofGuard: ${attestation.status} (CQS: ${attestation.cqsScore}) — ${attestation.reason}`,
+          stepId: step.id,
+          attestationId: attestation.attestationId,
+          status: attestation.status,
+          cqsScore: attestation.cqsScore,
+          flagged: attestation.flagged,
+          guardrailsTriggered: attestation.guardrailsTriggered,
+          reason: attestation.reason,
+        });
+
+        await db.appendLog({
+          executionId,
+          stepId: step.id,
+          level: attestation.flagged ? "warn" : "info",
+          message: `ProofGuard: ${attestation.status} (CQS: ${attestation.cqsScore}) ${attestation.guardrailsTriggered.length > 0 ? `[${attestation.guardrailsTriggered.join(", ")}]` : ""} — ${attestation.reason}`,
+        });
+
+        // Handle BLOCKED status
+        if (attestation.status === "BLOCKED") {
+          throw new Error(`ProofGuard BLOCKED: ${attestation.reason}`);
+        }
+
+        // Handle HITL — wait for human approval
+        if (attestation.status === "REQUIRES_HITL") {
+          sendSSE(executionId, {
+            type: "hitl_waiting",
+            message: `Awaiting human approval for ${agentName}...`,
+            stepId: step.id,
+            attestationId: attestation.attestationId,
+            agentName,
+            cqsScore: attestation.cqsScore,
+          });
+
+          await db.appendLog({
+            executionId,
+            stepId: step.id,
+            level: "warn",
+            message: `HITL: Awaiting human approval (attestation: ${attestation.attestationId})`,
+          });
+
+          try {
+            await proofguard.waitForHITL(attestation.attestationId);
+
+            sendSSE(executionId, {
+              type: "hitl_resumed",
+              message: `Human approval granted for ${agentName}. Resuming execution.`,
+              stepId: step.id,
+              attestationId: attestation.attestationId,
+            });
+          } catch (hitlError) {
+            const hitlMsg = hitlError instanceof Error ? hitlError.message : "HITL failed";
+            throw new Error(`ProofGuard HITL: ${hitlMsg}`);
+          }
+        }
+
         // ─── Build context for this agent ────────────────────────────
         const agentContext = buildContextForAgent(executionId, step.agentId);
 
@@ -386,8 +470,16 @@ executionRouter.post("/api/execute/:executionId/run", async (req: Request, res: 
           }
         }
 
-        // ─── Generate proof hash ────────────────────────────────────
+        // ─── Generate proof hash ────────────────────────────────
         const proofHash = generateProofHash(step.id, JSON.stringify(output));
+
+        // ─── Record execution in ProofGuard audit trail (with proof hash) ────────
+        proofguard.recordExecution(
+          attestation.attestationId,
+          output,
+          true,
+          proofHash
+        );
 
         // ─── Mark step as completed ─────────────────────────────────
         await db.updateStepExecution(stepExec.id, {
@@ -424,6 +516,15 @@ executionRouter.post("/api/execute/:executionId/run", async (req: Request, res: 
         });
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : "Unknown error";
+
+        // Record failure in ProofGuard audit trail
+        if (attestation) {
+          proofguard.recordExecution(
+            attestation.attestationId,
+            { error: errorMsg },
+            false
+          );
+        }
 
         await db.updateStepExecution(stepExec.id, {
           status: "failed",
@@ -738,5 +839,104 @@ async function executeLLMStep(
     };
   }
 }
+
+// ─── ProofGuard Governance Endpoints ──────────────────────────────────────────
+
+// Get ProofGuard stats
+executionRouter.get("/api/proofguard/stats", async (_req: Request, res: Response) => {
+  try {
+    const stats = ProofGuard.getStats();
+    res.json(stats);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
+// List all attestations
+executionRouter.get("/api/proofguard/attestations", async (_req: Request, res: Response) => {
+  try {
+    const attestations = ProofGuard.listAllAttestations();
+    res.json(attestations);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
+// Get attestation by ID
+executionRouter.get("/api/proofguard/attestation/:attestationId", async (req: Request, res: Response) => {
+  try {
+    const attestation = ProofGuard.getAttestation(req.params.attestationId);
+    if (!attestation) {
+      res.status(404).json({ error: "Attestation not found" });
+      return;
+    }
+    res.json(attestation);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
+// Get HITL status for an attestation
+executionRouter.get("/api/proofguard/attest/status/:attestationId", async (req: Request, res: Response) => {
+  try {
+    const decision = ProofGuard.getHITLDecision(req.params.attestationId);
+    if (!decision) {
+      res.status(404).json({ error: "No HITL decision found" });
+      return;
+    }
+    res.json(decision);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
+// List pending HITL decisions
+executionRouter.get("/api/proofguard/hitl/pending", async (_req: Request, res: Response) => {
+  try {
+    const pending = ProofGuard.listPendingHITL();
+    res.json(pending);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
+// Approve HITL decision
+executionRouter.post("/api/proofguard/hitl/:attestationId/approve", async (req: Request, res: Response) => {
+  try {
+    const { attestationId } = req.params;
+    const { decidedBy, reason } = req.body ?? {};
+    const success = ProofGuard.approveHITL(attestationId, decidedBy, reason);
+    if (!success) {
+      res.status(400).json({ error: "Cannot approve — decision not found or already resolved" });
+      return;
+    }
+    res.json({ success: true, attestationId, status: "approved" });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
+// Reject HITL decision
+executionRouter.post("/api/proofguard/hitl/:attestationId/reject", async (req: Request, res: Response) => {
+  try {
+    const { attestationId } = req.params;
+    const { decidedBy, reason } = req.body ?? {};
+    const success = ProofGuard.rejectHITL(attestationId, decidedBy, reason);
+    if (!success) {
+      res.status(400).json({ error: "Cannot reject — decision not found or already resolved" });
+      return;
+    }
+    res.json({ success: true, attestationId, status: "rejected" });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: errorMsg });
+  }
+});
 
 export { executionRouter };

@@ -72,9 +72,20 @@
 - [x] Wire Forge LLM as primary for Python agents (Anthropic as optional override)
 - [x] End-to-end test: Business Launch Pipeline (Business Builder → Funding Intelligence → ExecAI Coach → Documentary Tracker) — ALL 4 STEPS PASSED
 - [x] Run full 20-step Business Launch Pipeline from UI — ALL 20/20 STEPS COMPLETED in 2m48s, 17 artifacts, all proofs verified
-- [ ] Push webapp as platform/ in LaunchOpsPro repo
-- [ ] Wire platform Python bridge to LaunchOpsPro/agents (update paths)
-- [ ] Update LaunchOpsPro README with platform integration docs
-- [ ] Run vitest from platform/ directory
-- [ ] Run end-to-end pipeline test from platform/ location
-- [ ] Push to GitHub Gnoscenti/LaunchOpsPro
+- [x] Push webapp as platform/ in LaunchOpsPro repo
+- [x] Wire platform Python bridge to LaunchOpsPro/agents (update paths)
+- [x] Update LaunchOpsPro README with platform integration docs
+- [x] Run vitest from platform/ directory — 71 tests pass
+- [x] Run end-to-end pipeline test from platform/ location — all agents import and execute
+- [x] Push to GitHub Gnoscenti/LaunchOpsPro — commit f5239f3
+- [x] Wire Stripe secret to Credential Vault (validate key, update Trust Score)
+- [x] Wire GitHub token to Credential Vault (validate, update Trust Score)
+- [x] Integrate ProofGuard governance (CQS scoring + HITL approval gates) — 20/20 attestations in pipeline run
+- [ ] Build revenue tiering system (Explorer free / Founder $49 / Governance $299 / Enterprise $1500+)
+- [ ] Build Founder Score lead magnet (Trust Score gap analysis at end of naming flow)
+- [ ] Build Naming Contest viral loop (shareable poll endpoint + social decision poll)
+- [ ] Add Documentary Tracker social automation (Success Story template for X/LinkedIn)
+- [x] Add proofguard_attestations table to DB schema (immutable audit trail)
+- [x] Wire ProofGuard to persist every attestation + HITL decision + proof hash to DB
+- [x] Add tRPC endpoints to query persistent attestation history (stats, attestations, forExecution)
+- [x] Verify attestations survive server restarts — 20 attestations persisted in DB after pipeline run
