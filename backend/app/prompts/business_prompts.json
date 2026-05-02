@@ -1,0 +1,121 @@
+{
+  "packs": [
+    {
+      "name": "Default Business Builder",
+      "description": "Standard 11-step sequence for generating and validating new business ideas.",
+      "prompts": [
+        {
+          "id": "prompt_0_setup",
+          "title": "Initial Setup Interview",
+          "prompt": "You are an expert business consultant. Your goal is to extract the user's constraints, skills, and goals to create a Build Spec.\n\nAnalyze the user's input and extract the following information:\n1. Technical and non-technical skills\n2. Time available per week\n3. Initial budget\n4. Risk tolerance (low, medium, high)\n5. Preferred business model (subscription, one-time, hybrid, freemium)\n6. Target income and timeline\n\nFormat your response as a JSON object matching the BuildConstraints schema."
+        },
+        {
+          "id": "prompt_1_concepts",
+          "title": "Generate Business Concepts",
+          "prompt": "Based on the Build Spec constraints, generate 3 highly optimized business concepts.\n\nFor each concept, provide:\n1. Title and one-sentence description\n2. Ideal Customer Profile (ICP)\n3. Core pain point solved\n4. Measurable outcome for the customer\n5. Why this fits the user's constraints (low-touch rationale)\n6. Competitive moat\n7. Proposed pricing ladder\n8. Primary acquisition channels\n\nFormat your response as a JSON array of BusinessConcept objects."
+        },
+        {
+          "id": "prompt_2_validation",
+          "title": "Validation Plan",
+          "prompt": "Create a lean, 7-day validation plan for the selected business concept.\n\nThe plan must include:\n1. The core hypothesis to test\n2. The minimum viable offer (MVO)\n3. 3 specific, low-cost experiments to run (e.g., cold email, landing page + ads, community posting)\n4. Success metrics for each experiment (e.g., 5% conversion rate, 3 pre-sales)\n5. A daily schedule of actions\n\nOutput the plan in clear markdown format."
+        },
+        {
+          "id": "prompt_3_positioning",
+          "title": "Competitive Positioning",
+          "prompt": "Develop a competitive positioning strategy for the selected concept.\n\n1. Identify 3-5 indirect or direct competitors.\n2. Map them on a 2x2 matrix (e.g., Price vs. Complexity).\n3. Define the 'Positioning Wedge' - the specific angle or niche where this business will dominate.\n4. Write a 1-sentence positioning statement: 'For [Target Audience] who [Pain Point], [Product Name] is a [Category] that provides [Core Benefit] unlike [Competitor].'\n\nOutput the strategy in markdown format."
+        },
+        {
+          "id": "prompt_4_offer",
+          "title": "Design Core Offer",
+          "prompt": "Design an irresistible core offer that maximizes perceived value while minimizing fulfillment cost.\n\nInclude:\n1. The Core Promise (Specific outcome + Timeframe)\n2. The Unique Mechanism (Why it works when other solutions failed)\n3. Deliverables (What exactly they get)\n4. Risk Reversal (Guarantee)\n5. Scarcity/Urgency elements\n6. Pricing Tiers (Basic, Pro, Enterprise)\n\nFormat as a structured markdown document."
+        },
+        {
+          "id": "prompt_5_brand",
+          "title": "Brand Identity",
+          "prompt": "Create a cohesive brand identity kit.\n\nProvide:\n1. 5 potential brand names (available as .com or .co)\n2. A memorable tagline (under 6 words)\n3. Brand Voice guidelines (e.g., Professional but witty, Direct and authoritative)\n4. Color palette suggestions (Primary, Secondary, Accent with Hex codes)\n5. Typography pairings (Header font + Body font)\n\nOutput as a markdown document."
+        },
+        {
+          "id": "prompt_7_home_copy",
+          "title": "Website Copy",
+          "prompt": "Write high-converting copy for a single-page landing site.\n\nStructure the copy using the following framework:\n1. Hero Section (H1, H2, Primary CTA)\n2. Problem Agitation (The 'Villain')\n3. Solution Introduction (The 'Hero')\n4. How It Works (3 simple steps)\n5. Benefits/Features (Focus on outcomes)\n6. Social Proof/Authority markers\n7. Pricing Section\n8. Final CTA and FAQ\n\nOutput the copy in markdown, clearly labeling each section."
+        },
+        {
+          "id": "prompt_10_product_blueprint",
+          "title": "Product Blueprint",
+          "prompt": "Create a technical and operational blueprint for the MVP (Minimum Viable Product).\n\nDefine:\n1. Core User Flow (Step-by-step journey from signup to first value)\n2. Required Features (Must-haves for V1)\n3. Deferred Features (Nice-to-haves for V2)\n4. Recommended Tech Stack (No-code/Low-code preferred based on constraints)\n5. Data Models (Core entities and relationships)\n\nOutput as a structured markdown document."
+        },
+        {
+          "id": "prompt_14_automation_nocode",
+          "title": "Automation Architecture",
+          "prompt": "Design a zero-touch automation architecture for fulfillment and operations.\n\nMap out the following workflows:\n1. Customer Onboarding (Payment -> Welcome Email -> Provisioning)\n2. Service Fulfillment (How the core value is delivered automatically)\n3. Customer Support (Self-serve docs -> AI Bot -> Escalation)\n4. Churn Prevention (Failed payment recovery, usage drop-off alerts)\n\nRecommend specific tools (e.g., Zapier, Make, Stripe, Resend) for each workflow."
+        },
+        {
+          "id": "prompt_18_channel_focus",
+          "title": "Go-to-Market Plan",
+          "prompt": "Develop a focused 60-day Go-to-Market (GTM) execution plan.\n\n1. Select ONE primary acquisition channel based on the ICP and constraints.\n2. Define the content/outbound strategy for that channel.\n3. Create a week-by-week execution timeline (Weeks 1-8).\n4. Define the Key Performance Indicators (KPIs) to track weekly.\n5. Outline a small budget allocation plan (if applicable).\n\nOutput as a markdown document."
+        }
+      ]
+    },
+    {
+      "name": "SaaS Vertical (LaunchOps)",
+      "description": "11-step automated launch sequence for SaaS businesses.",
+      "prompts": [
+        {
+          "id": "prompt_saas_security",
+          "title": "Security & Credentials Setup",
+          "prompt": "You are the Orchestrator Agent. Your task is to generate secure credentials and API keys for the new SaaS project.\n\n1. Generate a secure master password.\n2. Define the required environment variables for a standard Next.js/Supabase/Stripe stack.\n3. Create a plan for storing these securely (e.g., Google Secret Manager or Vercel Env).\n\nOutput the plan in markdown. Do NOT output actual raw secrets in plain text, use placeholders."
+        },
+        {
+          "id": "prompt_saas_legal",
+          "title": "Legal Formation",
+          "prompt": "You are the Paperwork Agent. Your task is to prepare the legal foundation for the SaaS.\n\n1. Draft the structure for a standard Delaware LLC Operating Agreement.\n2. Generate a standard SaaS Terms of Service outline.\n3. Generate a standard Privacy Policy outline (GDPR/CCPA compliant).\n\nOutput the outlines in markdown format."
+        },
+        {
+          "id": "prompt_saas_repo",
+          "title": "Repository Setup",
+          "prompt": "You are the WebDev Agent. Your task is to define the repository structure and CI/CD pipeline.\n\n1. Outline the folder structure for a Next.js App Router project.\n2. Define the necessary GitHub Actions workflows (Lint, Test, Build).\n3. List the core dependencies to be included in package.json.\n\nOutput the structure and configuration in markdown."
+        },
+        {
+          "id": "prompt_saas_stripe",
+          "title": "Stripe Configuration",
+          "prompt": "You are the Stripe Agent. Your task is to design the billing architecture.\n\nBased on the provided pricing tiers:\n1. Define the Stripe Product and Price objects required.\n2. Outline the webhook events that need to be handled (e.g., checkout.session.completed, invoice.payment_succeeded).\n3. Draft the logic for handling subscription upgrades/downgrades.\n\nOutput the architecture in markdown."
+        },
+        {
+          "id": "prompt_saas_email",
+          "title": "Transactional Email Setup",
+          "prompt": "You are the Marketing Agent. Your task is to design the transactional email flows.\n\nDraft the subject lines and core copy for the following essential emails:\n1. Welcome / Email Verification\n2. Password Reset\n3. Subscription Confirmed / Receipt\n4. Payment Failed / Dunning\n5. Trial Expiring Soon\n\nOutput the email templates in markdown."
+        },
+        {
+          "id": "prompt_saas_website",
+          "title": "Website Deployment",
+          "prompt": "You are the WebDev Agent. Your task is to plan the deployment architecture.\n\n1. Define the Vercel deployment configuration.\n2. Outline the database schema (e.g., Supabase/PostgreSQL) for Users, Subscriptions, and core app data.\n3. Detail the authentication flow (e.g., NextAuth or Supabase Auth).\n\nOutput the technical architecture in markdown."
+        },
+        {
+          "id": "prompt_saas_marketing",
+          "title": "Marketing Automation",
+          "prompt": "You are the Marketing Agent. Your task is to design the marketing automation funnel.\n\n1. Design a 5-day email onboarding sequence to activate new users.\n2. Define the trigger events for each email.\n3. Outline a lead magnet strategy to capture emails before signup.\n\nOutput the sequence and strategy in markdown."
+        },
+        {
+          "id": "prompt_saas_support",
+          "title": "Support Infrastructure",
+          "prompt": "You are the Orchestrator Agent. Your task is to design the customer support system.\n\n1. Outline the structure for a self-serve Help Center / Knowledge Base (Top 5 categories).\n2. Define the support escalation path (Bot -> Email -> Human).\n3. Draft 3 canned responses for common SaaS queries (Refund request, Bug report, Feature request).\n\nOutput the support plan in markdown."
+        },
+        {
+          "id": "prompt_saas_analytics",
+          "title": "Analytics Implementation",
+          "prompt": "You are the WebDev Agent. Your task is to define the analytics tracking plan.\n\n1. List the core custom events to track (e.g., 'Signed Up', 'Started Trial', 'Used Core Feature').\n2. Define the properties to send with each event.\n3. Recommend a privacy-friendly analytics stack (e.g., PostHog, Plausible, or Fathom).\n\nOutput the tracking plan in markdown."
+        },
+        {
+          "id": "prompt_saas_project",
+          "title": "Project Management",
+          "prompt": "You are the Orchestrator Agent. Your task is to set up the ongoing project management structure.\n\n1. Define the columns for a Kanban board (e.g., Backlog, Up Next, In Progress, Review, Done).\n2. Create 5 initial epic/milestone tickets for the first month post-launch.\n3. Define the bug reporting template.\n\nOutput the project structure in markdown."
+        },
+        {
+          "id": "prompt_saas_growth",
+          "title": "Growth & GTM",
+          "prompt": "You are the Business Builder Agent. Your task is to define the Product-Led Growth (PLG) strategy.\n\n1. Identify the 'Aha! Moment' in the product.\n2. Design a viral loop or referral mechanism built into the product.\n3. Outline a strategy for launching on Product Hunt / Hacker News.\n\nOutput the growth strategy in markdown."
+        }
+      ]
+    }
+  ]
+}

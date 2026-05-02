@@ -1,139 +1,40 @@
 version: '3.8'
 
 services:
-  # ── Dynexis LaunchOps API ─────────────────────────────────────────────
-  launchops:
-    build: .
-    container_name: launchops_api
-    restart: always
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: founder-autopilot-backend
     ports:
       - "8001:8001"
-    env_file:
-      - .env
-    environment:
-      LAUNCHOPS_API_PORT: "8001"
-      LAUNCHOPS_DB_PATH: /data/launchops.db
     volumes:
-      - ./data/launchops:/data
-      - ./data/launchops_docs:/root/.launchops/documents
-    networks:
-      - launchops_net
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+      - ./backend:/app
+      # Exclude the virtual environment if it exists locally
+      - /app/.venv
+    environment:
+      - MOCK_MODE=true
+      - OPENAI_API_KEY=EMPTY
+      - OPENAI_API_BASE=http://host.docker.internal:8000/v1 # Assuming vLLM runs on host
+      - OPENAI_MODEL=Qwen/Qwen2.5-7B-Instruct
+    # Allow backend to reach host machine (for vLLM)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
 
-  # 1. WordPress (Site + Course)
-  wordpress:
-    image: wordpress:latest
-    container_name: launchops_wordpress
-    restart: always
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: founder-autopilot-frontend
     ports:
-      - "8080:80"
-    environment:
-      WORDPRESS_DB_HOST: db
-      WORDPRESS_DB_USER: wpuser
-      WORDPRESS_DB_PASSWORD: ${DB_PASSWORD:-securepassword123}
-      WORDPRESS_DB_NAME: wordpress
+      - "3000:3000"
     volumes:
-      - ./data/wordpress:/var/www/html
-    networks:
-      - launchops_net
+      - ./frontend:/app
+      # Prevent local node_modules from overriding container's
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://localhost:8001
     depends_on:
-      - db
-
-  db:
-    image: mariadb:10.64
-    container_name: launchops_db
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword123}
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wpuser
-      MYSQL_PASSWORD: ${DB_PASSWORD:-securepassword123}
-    volumes:
-      - ./data/mysql:/var/lib/mysql
-    networks:
-      - launchops_net
-
-  # 2. SuiteCRM (Pipeline)
-  suitecrm:
-    image: bitnami/suitecrm:latest
-    container_name: launchops_suitecrm
-    restart: always
-    ports:
-      - "8081:8080"
-    environment:
-      - MARIADB_HOST=db
-      - MARIADB_PORT_NUMBER=3306
-      - SUITECRM_DATABASE_USER=wpuser
-      - SUITECRM_DATABASE_PASSWORD=${DB_PASSWORD:-securepassword123}
-      - SUITECRM_DATABASE_NAME=suitecrm
-    volumes:
-      - ./data/suitecrm:/bitnami/suitecrm
-    networks:
-      - launchops_net
-    depends_on:
-      - db
-
-  # 3. Mautic (Email + Automations)
-  mautic:
-    image: mautic/mautic:v4-apache
-    container_name: launchops_mautic
-    restart: always
-    ports:
-      - "8082:80"
-    environment:
-      - MAUTIC_DB_HOST=db
-      - MAUTIC_DB_USER=wpuser
-      - MAUTIC_DB_PASSWORD=${DB_PASSWORD:-securepassword123}
-      - MAUTIC_DB_NAME=mautic
-    volumes:
-      - ./data/mautic:/var/www/html
-    networks:
-      - launchops_net
-    depends_on:
-      - db
-
-  # 4. Matomo (Analytics)
-  matomo:
-    image: matomo:latest
-    container_name: launchops_matomo
-    restart: always
-    ports:
-      - "8083:80"
-    environment:
-      - MATOMO_DATABASE_HOST=db
-      - MATOMO_DATABASE_USERNAME=wpuser
-      - MATOMO_DATABASE_PASSWORD=${DB_PASSWORD:-securepassword123}
-      - MATOMO_DATABASE_DBNAME=matomo
-    volumes:
-      - ./data/matomo:/var/www/html
-    networks:
-      - launchops_net
-    depends_on:
-      - db
-
-  # 5. Vaultwarden (Bitwarden Credentials)
-  vaultwarden:
-    image: vaultwarden/server:latest
-    container_name: launchops_vaultwarden
-    restart: always
-    environment:
-      - WEBSOCKET_ENABLED=true
-      - SIGNUPS_ALLOWED=false
-      - ADMIN_TOKEN=${VAULT_ADMIN_TOKEN:-generate_a_secure_token}
-    ports:
-      - "8000:80"
-    volumes:
-      - ./data/vaultwarden:/data
-    networks:
-      - launchops_net
-
-  # Note: Stripe (Payments) is handled via API keys in the applications, not a local container.
-
-networks:
-  launchops_net:
-    driver: bridge
+      - backend
+    restart: unless-stopped
