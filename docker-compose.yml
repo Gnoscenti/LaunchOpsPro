@@ -23,6 +23,9 @@ services:
     build:
       context: ./platform
       dockerfile: Dockerfile
+      args:
+        - VITE_OAUTH_PORTAL_URL=https://manus.im
+        - VITE_APP_ID=4iPmRVDpMGdA4fQCzYmfK5
     container_name: launchops-platform
     ports:
       - "3000:3000"
@@ -33,6 +36,8 @@ services:
       - FASTAPI_URL=http://python-backend:8001
       - DATABASE_URL=sqlite:///sqlite.db
       - SESSION_SECRET=super-secret-key-for-dev
+      - VITE_OAUTH_PORTAL_URL=https://manus.im
+      - VITE_APP_ID=4iPmRVDpMGdA4fQCzYmfK5
     depends_on:
       - python-backend
     restart: unless-stopped
