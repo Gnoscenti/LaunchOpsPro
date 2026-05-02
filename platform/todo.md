@@ -1,0 +1,80 @@
+# Project TODO
+
+- [x] Basic Brand Architect comparison tool
+- [x] Atlas Orchestrator dashboard with 10 pages
+- [x] Drag-and-drop Workflow Editor with Proof-of-Agent
+- [x] Upgrade to web-db-user (database + backend + auth)
+- [x] Database schema: workflows, steps, executions, templates, credentials, execution_logs, users
+- [x] Backend API routes: 6 tRPC routers (workflow, step, execution, template, credential, log)
+- [x] Run Workflow engine with real-time SSE streaming
+- [x] Workflow Template Library: 6 seeded templates (Business Launch, SaaS, Ecommerce, Agency, Legal, Infrastructure)
+- [x] Pipeline.tsx wired to tRPC (list workflows, clone templates, start executions)
+- [x] Configuration.tsx wired to tRPC (list/save/delete credentials)
+- [x] WorkflowEditor.tsx wired to tRPC (full CRUD with drag-and-drop canvas)
+- [x] Vitest tests: 19 passing (all 6 routers + auth logout) → now 46 passing
+- [x] Connect LaunchOps Python backend to Node.js execution engine
+- [x] Wire Run Workflow button to execute actual LaunchOps agents
+- [x] Stream real-time agent output to canvas nodes via SSE
+- [ ] Export/import workflow definitions
+- [ ] Deploy to production domain (thesoloprenuerforge.com)
+- [ ] Update README with graphical UI instructions
+- [ ] Video walkthrough for documentary
+- [x] Node.js-to-Python execution bridge (spawn Python agents, parse output)
+- [x] SSE streaming endpoint for real-time execution status updates
+- [x] Update execution router to integrate bridge (start/advance/cancel)
+- [x] Frontend Pipeline + WorkflowEditor consume SSE for live step status
+- [x] Vitest tests: 56 → 71 passing (agent registry router, pipeline, context chain, LLM router, auth)
+- [x] Integrate Synthesis Agent into LLM execution path with full structured output schema
+- [x] Integrate 7-Pillar Execution Agent with pillar-by-pillar structured output
+- [x] Integrate LaunchOps Systems Agent with CRM/automation/sprint output schema
+- [x] Register all three agents in agentRunner.py Python bridge mapping
+- [x] Add agent-specific prompts to executionEngine.ts LLM fallback path
+- [x] Agent Registry system: 24 agents with capabilities, I/O schemas, versioning, model preferences, metadata
+- [x] Context Chain: accumulated context flows forward between steps with selective retrieval
+- [x] Artifact persistence: store structured agent outputs to S3 with metadata in execution logs
+- [x] Agent capability negotiation: steps declare required capabilities, engine matches to available agents
+- [x] Model-agnostic execution: OpenAI (Forge) + Anthropic with automatic fallback and per-agent routing
+- [x] Frontend: artifact panel with download links in execution log
+- [x] Frontend: context chain indicator showing accumulated steps and token count
+- [x] Agent Registry UI: tRPC endpoint to expose registry data (list, stats, detail)
+- [x] Agent Registry UI: page with grid/list view, search, category/capability/mode filters
+- [x] Agent Registry UI: expandable detail panel with chainable fields, context requirements, secrets, tags
+- [x] Agent Registry UI: wired into /agents route (already existed in sidebar)
+- [x] Agent Registry UI: 10 vitest tests for agentRegistry router (56 total passing)
+- [x] Register Content Engine agent in agentRegistry.ts (from launchops-founder-edition)
+- [x] Register DynExecutiv agent in agentRegistry.ts (from launchops-founder-edition)
+- [x] Register Founder OS agent in agentRegistry.ts (from launchops-founder-edition)
+- [x] Register Metrics Agent in agentRegistry.ts (from launchops-founder-edition)
+- [x] Rewire pythonBridge.ts to invoke real launchops-founder-edition agents
+- [x] Build multi-provider LLM abstraction (Anthropic + OpenAI with fallback) — llmRouter.ts
+- [x] Update execution engine to use multi-provider LLM with per-agent model routing
+- [x] Update Agent Registry UI with provider health, routing stats, and quick-launch button
+- [x] Vitest tests: 71 passing (agent registry, pipeline, LLM router, context chain, routers, auth)
+- [x] Verify all 25 agents registered and bridge wired to real launchops-founder-edition
+- [x] Fix Python bridge argument passing for real agent methods (task dict pattern)
+- [ ] End-to-end test: BaseAgent, MethodDispatch, and LLM-only agent categories
+- [ ] Agent-specific input forms in Quick Launch UI
+- [x] Wire Dashboard to real tRPC data (workflows, executions, agents, logs)
+- [x] Wire Metrics to computed DB data (completion rates, durations, utilization)
+- [x] Wire TrustScore to computed metrics (execution history, credential coverage)
+- [x] Wire Orchestrator to real execution logs via tRPC
+- [x] Wire PilotScope to generate from real workflow definitions
+- [ ] Wire Runbook to dynamic content from workflow steps
+- [x] Integrate Business Builder agent: 7 methods (build_spec_intake, business_model_canvas, go_to_market, competitive_analysis, pricing_strategy, operational_plan, kpi_dashboard)
+- [x] Integrate Funding Intelligence agent: 5 methods (readiness_report, formation_optimizer, sbir_eligibility, vc_readiness, grant_search)
+- [x] Integrate ExecAI Coach agent: 8 methods (strategic_review, entity_advice, funding_plan, ip_strategy, ask, weekly_review, decision_support, full_coaching_session)
+- [x] Integrate Documentary Tracker agent: 6 methods (log_milestone, log_ai_moment, generate_narrative, generate_chapter, timeline_report, export_documentary)
+- [x] Register Paralegal Bot agent in Node.js registry (was in Python bridge but missing from UI)
+- [x] Update agentRunner.py: remove 4 agents from LLM_ONLY_AGENTS, add to AGENT_MAP + FOUNDER_METHODS
+- [x] Fix method dispatch to handle 'task' dict parameter pattern used by BaseAgent-style methods
+- [x] All 71 vitest tests passing
+- [x] Securely pass ANTHROPIC_API_KEY to Python agent environment for full LLM functionality
+- [x] Wire Forge LLM as primary for Python agents (Anthropic as optional override)
+- [x] End-to-end test: Business Launch Pipeline (Business Builder → Funding Intelligence → ExecAI Coach → Documentary Tracker) — ALL 4 STEPS PASSED
+- [x] Run full 20-step Business Launch Pipeline from UI — ALL 20/20 STEPS COMPLETED in 2m48s, 17 artifacts, all proofs verified
+- [ ] Push webapp as platform/ in LaunchOpsPro repo
+- [ ] Wire platform Python bridge to LaunchOpsPro/agents (update paths)
+- [ ] Update LaunchOpsPro README with platform integration docs
+- [ ] Run vitest from platform/ directory
+- [ ] Run end-to-end pipeline test from platform/ location
+- [ ] Push to GitHub Gnoscenti/LaunchOpsPro

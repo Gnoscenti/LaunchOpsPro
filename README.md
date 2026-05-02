@@ -1,10 +1,12 @@
-# Dynexis LaunchOps
+# LaunchOpsPro
 
 **Deploy a revenue-ready business in hours. Run it with zero drift. Cut everything that doesn't pay.**
 
-Dynexis LaunchOps is a governed agentic platform that launches, operates, and scales revenue-generating businesses. 17 specialized AI agents execute a 10-stage pipeline — from entity formation through Stripe payments to go-to-market — while every action is attested through ProofGuard, a real-time cognitive governance layer with human-in-the-loop controls.
+LaunchOpsPro is a governed agentic platform that launches, operates, and scales revenue-generating businesses. 25 specialized AI agents execute a 20-stage pipeline — from entity formation through Stripe payments to go-to-market — while every action is attested through ProofGuard, a real-time cognitive governance layer with human-in-the-loop controls.
 
 This is not a chatbot. This is an execution engine.
+
+**Live Platform**: [brand-architect.manus.space](https://brand-architect.manus.space)
 
 ---
 
@@ -25,7 +27,13 @@ The system operates across 7 layers:
 ### File Layout
 
 ```
-launchops-founder-edition/
+LaunchOpsPro/
+├── platform/                       # Production UI (React + tRPC + Node.js execution engine)
+│   ├── client/                     # Frontend: Dashboard, Workflow Editor, Pipeline, Agents, Metrics
+│   ├── server/                     # Backend: tRPC API, execution engine, Python bridge, LLM router
+│   ├── drizzle/                    # Database schema & migrations
+│   └── shared/                     # Shared types & constants
+│
 ├── launchops.py                    # CLI entrypoint
 │
 ├── core/                           # Engine internals
@@ -167,16 +175,23 @@ chmod +x install.sh && ./install.sh
 chmod +x healthcheck.sh && ./healthcheck.sh
 ```
 
-### 3. Start the Operator API + Dashboard
+### 3. Start the Platform UI (Production)
 
 ```bash
-# Terminal 1 — FastAPI backend
+# The platform/ directory is the production UI
+cd platform
+pnpm install
+pnpm db:push    # Sync database schema
+pnpm dev        # Start dev server (React + Express + tRPC)
+# Serves on http://localhost:3000
+```
+
+### 3b. Start the Legacy Operator API (Optional)
+
+```bash
+# Terminal 1 — FastAPI backend (legacy CLI mode)
 python -m api.main
 # Serves on http://localhost:8001
-
-# Terminal 2 — React dashboard
-cd dashboard && npm run dev
-# Serves on http://localhost:5173
 ```
 
 ### 4. Launch the Pipeline
