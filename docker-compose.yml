@@ -1,40 +1,40 @@
 version: '3.8'
 
 services:
-  backend:
+  python-backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: founder-autopilot-backend
+    container_name: launchops-python-backend
     ports:
       - "8001:8001"
     volumes:
       - ./backend:/app
-      # Exclude the virtual environment if it exists locally
       - /app/.venv
     environment:
       - MOCK_MODE=true
       - OPENAI_API_KEY=EMPTY
-      - OPENAI_API_BASE=http://host.docker.internal:8000/v1 # Assuming vLLM runs on host
+      - OPENAI_API_BASE=http://host.docker.internal:8000/v1
       - OPENAI_MODEL=Qwen/Qwen2.5-7B-Instruct
-    # Allow backend to reach host machine (for vLLM)
+      - DASHBOARD_ORIGIN=http://localhost:5000
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
-  frontend:
+  platform:
     build:
-      context: ./frontend
+      context: ./platform
       dockerfile: Dockerfile
-    container_name: founder-autopilot-frontend
+    container_name: launchops-platform
     ports:
-      - "3000:3000"
+      - "5000:5000"
     volumes:
-      - ./frontend:/app
-      # Prevent local node_modules from overriding container's
+      - ./platform:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8001
+      - FASTAPI_URL=http://python-backend:8001
+      - DATABASE_URL=sqlite:///sqlite.db
+      - SESSION_SECRET=super-secret-key-for-dev
     depends_on:
-      - backend
+      - python-backend
     restart: unless-stopped

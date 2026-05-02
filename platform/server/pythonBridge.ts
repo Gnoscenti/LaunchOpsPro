@@ -1,39 +1,17 @@
 /**
- * Atlas Orchestrator — Node.js ↔ Python Agent Bridge
+ * Atlas Orchestrator — Node.js ↔ Python Agent Bridge (Microservices Architecture)
  *
- * Spawns the Python agentRunner.py as a child process for each workflow step,
- * pipes the step task as JSON to stdin, and parses structured JSON-line events
- * from stdout. Supports real-time progress callbacks, cancellation, and
- * credential injection into the Python process environment.
- *
- * Architecture:
- *   Node.js (executionEngine) → pythonBridge.runAgent(step, creds)
- *     → spawn python3 agentRunner.py
- *       → stdin: JSON task payload
- *       ← stdout: JSON-line events (log, progress, result, error)
- *       ← exit code: 0 = success, 1 = failure
+ * This module acts as an API client to the Python FastAPI backend.
+ * Instead of spawning child processes, it makes HTTP requests to the
+ * FastAPI orchestration engine (running on port 8001 by default).
  */
-import { spawn, ChildProcess } from "child_process";
-import path from "path";
-import { fileURLToPath } from "url";
+import fetch from "node-fetch";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// The URL of the Python FastAPI backend
+const FASTAPI_URL = process.env.FASTAPI_URL || "http://localhost:8001";
 
-// Path to the Python agent runner script
-const AGENT_RUNNER_PATH = path.join(__dirname, "agentRunner.py");
-
-// Paths to the LaunchOps Python agents — monorepo structure
-// platform/ is inside LaunchOpsPro/, agents/ is a sibling directory
-const LAUNCHOPS_ROOT = path.resolve(__dirname, "..", ".."); // LaunchOpsPro/
-const FOUNDER_EDITION_DIR = LAUNCHOPS_ROOT; // agents/ lives at LaunchOpsPro/agents/
-const LEGACY_LAUNCHOPS_DIR = LAUNCHOPS_ROOT; // same root for legacy compat
-
-// Primary LaunchOps directory
-const LAUNCHOPS_DIR = LAUNCHOPS_ROOT;
-
-// Track active processes for cancellation
-const activeProcesses = new Map<number, ChildProcess>();
+// Track active executions for cancellation
+const activeExecutions = new Set<number>();
 
 export interface AgentTask {
   agentId: string;
@@ -61,26 +39,17 @@ export interface AgentResult {
 }
 
 export interface RunAgentOptions {
-  /** User credentials to inject as environment variables */
   credentials?: Array<{ keyName: string; encryptedValue: string }>;
-  /** Callback for real-time events (log, progress) */
   onEvent?: (event: AgentEvent) => void;
-  /** Timeout in milliseconds (default: 120000 = 2 minutes) */
   timeout?: number;
-  /** Execution ID for cancellation tracking */
   executionId?: number;
-  /** Business context to pass to the Python agent */
   businessContext?: Record<string, unknown>;
 }
 
 /**
- * Spawn the Python agent runner and execute a workflow step.
- *
- * Returns a structured result with the agent's output, all events emitted
- * during execution, and whether the step used a real Python agent or the
- * LLM fallback path.
+ * Execute a workflow step by calling the Python FastAPI backend.
  */
-export function runAgent(task: AgentTask, options: RunAgentOptions = {}): Promise<AgentResult> {
+export async function runAgent(task: AgentTask, options: RunAgentOptions = {}): Promise<AgentResult> {
   const {
     credentials = [],
     onEvent,
@@ -89,199 +58,135 @@ export function runAgent(task: AgentTask, options: RunAgentOptions = {}): Promis
     businessContext = {},
   } = options;
 
-  return new Promise((resolve, reject) => {
-    // Build environment: inherit process env + inject user credentials
-    const env: Record<string, string> = { ...process.env } as Record<string, string>;
-    env.FOUNDER_EDITION_DIR = FOUNDER_EDITION_DIR;
-    env.LAUNCHOPS_DIR = LEGACY_LAUNCHOPS_DIR;
-    env.PYTHONUNBUFFERED = "1"; // Force unbuffered output for real-time streaming
-    // Unset PYTHONHOME/NUITKA_PYTHONPATH to prevent uv's Python 3.13 from hijacking the system Python 3.11
-    delete env.PYTHONHOME;
-    delete env.NUITKA_PYTHONPATH;
+  if (executionId) {
+    activeExecutions.add(executionId);
+  }
 
-    // Inject Forge LLM credentials for Python agents (primary LLM provider)
-    // Forge is OpenAI-compatible, so Python agents use it via the OpenAI SDK
-    if (process.env.BUILT_IN_FORGE_API_URL) {
-      env.FORGE_API_URL = process.env.BUILT_IN_FORGE_API_URL;
-    }
-    if (process.env.BUILT_IN_FORGE_API_KEY) {
-      env.FORGE_API_KEY = process.env.BUILT_IN_FORGE_API_KEY;
-    }
+  const events: AgentEvent[] = [];
+  
+  // Helper to emit and store events
+  const emitEvent = (event: AgentEvent) => {
+    events.push(event);
+    if (onEvent) onEvent(event);
+  };
 
-    // Inject user credentials as environment variables
-    for (const cred of credentials) {
-      if (cred.keyName && cred.encryptedValue) {
-        // The encryptedValue is stored as-is (application-layer "encryption" is just the raw value
-        // in this prototype — production would use proper encryption/decryption here)
-        env[cred.keyName] = cred.encryptedValue;
-      }
-    }
+  emitEvent({ event: "log", level: "info", message: `Starting agent ${task.agentId} via FastAPI bridge...` });
+  emitEvent({ event: "progress", percent: 10, message: "Connecting to Python backend..." });
 
-    // Spawn the Python process
-    // Use system Python 3.11 explicitly to avoid uv's Python 3.13 which has import issues
-    const proc = spawn("/usr/bin/python3.11", [AGENT_RUNNER_PATH], {
-      cwd: LAUNCHOPS_DIR,
-      env,
-      stdio: ["pipe", "pipe", "pipe"],
-    });
-
-    // Track for cancellation
-    if (executionId) {
-      activeProcesses.set(executionId, proc);
-    }
-
-    const events: AgentEvent[] = [];
-    let lastResult: AgentEvent | null = null;
-    let stdoutBuffer = "";
-    let stderrBuffer = "";
-    let settled = false;
-
-    // Timeout handler
-    const timer = setTimeout(() => {
-      if (!settled) {
-        settled = true;
-        proc.kill("SIGTERM");
-        reject(new Error(`Agent timed out after ${timeout / 1000}s: ${task.label}`));
-      }
-    }, timeout);
-
-    // Parse JSON lines from stdout
-    proc.stdout.on("data", (chunk: Buffer) => {
-      stdoutBuffer += chunk.toString();
-      const lines = stdoutBuffer.split("\n");
-      // Keep the last incomplete line in the buffer
-      stdoutBuffer = lines.pop() || "";
-
-      for (const line of lines) {
-        if (!line.trim()) continue;
-        try {
-          const event: AgentEvent = JSON.parse(line);
-          events.push(event);
-
-          // Track the last result event
-          if (event.event === "result") {
-            lastResult = event;
-          }
-
-          // Forward real-time events to the callback
-          if (onEvent) {
-            onEvent(event);
-          }
-        } catch {
-          // Non-JSON output — treat as a log line
-          const logEvent: AgentEvent = {
-            event: "log",
-            level: "debug",
-            message: line,
-          };
-          events.push(logEvent);
-          if (onEvent) onEvent(logEvent);
-        }
-      }
-    });
-
-    proc.stderr.on("data", (chunk: Buffer) => {
-      stderrBuffer += chunk.toString();
-    });
-
-    proc.on("close", (code) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-
-      if (executionId) {
-        activeProcesses.delete(executionId);
-      }
-
-      // Process any remaining stdout buffer
-      if (stdoutBuffer.trim()) {
-        try {
-          const event: AgentEvent = JSON.parse(stdoutBuffer);
-          events.push(event);
-          if (event.event === "result") lastResult = event;
-        } catch {
-          events.push({ event: "log", level: "debug", message: stdoutBuffer });
-        }
-      }
-
-      // Determine the result
-      if (lastResult && lastResult.event === "result") {
-        resolve({
-          success: lastResult.success ?? (code === 0),
-          data: lastResult.data ?? {},
-          events,
-          mode: lastResult.data?.mode === "llm_fallback" ? "llm_fallback" : "python",
-        });
-      } else if (code === 0) {
-        // Process exited cleanly but no explicit result event
-        resolve({
-          success: true,
-          data: {
-            summary: `${task.label} completed`,
-            actions: [],
-            outputs: {},
-            recommendations: [],
-          },
-          events,
-          mode: "python",
-        });
-      } else {
-        // Process failed
-        const errorMsg =
-          events.find((e) => e.event === "error")?.message ??
-          stderrBuffer.trim().slice(0, 500) ??
-          `Agent process exited with code ${code}`;
-
-        reject(new Error(errorMsg));
-      }
-    });
-
-    proc.on("error", (err) => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      if (executionId) activeProcesses.delete(executionId);
-      reject(new Error(`Failed to spawn Python agent: ${err.message}`));
-    });
-
-    // Write the task payload to stdin and close
-    const payload: Record<string, unknown> = {
-      agentId: task.agentId,
+  try {
+    // 1. Prepare the payload
+    const payload = {
+      agent_id: task.agentId,
       label: task.label,
       description: task.description,
       config: task.config,
       context: { ...businessContext, ...(task.context ?? {}) },
-      taskType: task.taskType,
+      task_type: task.taskType,
+      credentials: credentials.reduce((acc, cred) => {
+        acc[cred.keyName] = cred.encryptedValue;
+        return acc;
+      }, {} as Record<string, string>)
     };
 
-    proc.stdin.write(JSON.stringify(payload));
-    proc.stdin.end();
-  });
+    // 2. Make the HTTP request to FastAPI
+    // Note: We use AbortController for timeout/cancellation
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    // Check if cancelled before starting
+    if (executionId && !activeExecutions.has(executionId)) {
+      throw new Error("Execution cancelled before starting");
+    }
+
+    emitEvent({ event: "progress", percent: 30, message: "Executing task on Python backend..." });
+
+    // In a real streaming implementation, we would use Server-Sent Events (SSE)
+    // or WebSockets here. For this bridge, we'll simulate the synchronous call
+    // but in production, FastAPI should expose a streaming endpoint.
+    // Call the single-stage sync endpoint
+    const response = await fetch(`${FASTAPI_URL}/atlas/v2/execute/stage`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        stage: task.label, // Assuming task.label matches the stage name in STAGES
+        enforce_hitl: false // Or pass from options if needed
+      }),
+      signal: controller.signal as any,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`FastAPI returned ${response.status}: ${errorText}`);
+    }
+
+    const result = await response.json() as any;
+
+    emitEvent({ event: "progress", percent: 100, message: "Execution complete" });
+    
+    const finalResultEvent: AgentEvent = {
+      event: "result",
+      success: result.success ?? true,
+      data: result.data ?? result,
+    };
+    
+    emitEvent(finalResultEvent);
+
+    if (executionId) {
+      activeExecutions.delete(executionId);
+    }
+
+    return {
+      success: finalResultEvent.success!,
+      data: finalResultEvent.data!,
+      events,
+      mode: result.mode === "llm_fallback" ? "llm_fallback" : "python",
+    };
+
+  } catch (error: any) {
+    if (executionId) {
+      activeExecutions.delete(executionId);
+    }
+
+    const isAbort = error.name === "AbortError";
+    const errorMessage = isAbort 
+      ? `Agent timed out or was cancelled after ${timeout / 1000}s: ${task.label}`
+      : `Failed to execute Python agent: ${error.message}`;
+
+    emitEvent({ event: "error", message: errorMessage });
+
+    throw new Error(errorMessage);
+  }
 }
 
 /**
- * Cancel a running execution by killing its Python process.
+ * Cancel a running execution.
+ * Note: In a true microservices architecture, this should also send a DELETE/CANCEL
+ * request to the FastAPI backend to stop the underlying Python task.
  */
 export function cancelExecution(executionId: number): boolean {
-  const proc = activeProcesses.get(executionId);
-  if (proc) {
-    proc.kill("SIGTERM");
-    activeProcesses.delete(executionId);
+  if (activeExecutions.has(executionId)) {
+    activeExecutions.delete(executionId);
+    // TODO: Send cancellation request to FastAPI
+    // fetch(`${FASTAPI_URL}/api/executions/${executionId}/cancel`, { method: 'POST' }).catch(console.error);
     return true;
   }
   return false;
 }
 
 /**
- * Check if an execution has an active Python process.
+ * Check if an execution is currently active.
  */
 export function isExecutionRunning(executionId: number): boolean {
-  return activeProcesses.has(executionId);
+  return activeExecutions.has(executionId);
 }
 
 /**
- * Get the count of currently active agent processes.
+ * Get the count of currently active agent executions.
  */
 export function getActiveProcessCount(): number {
-  return activeProcesses.size;
+  return activeExecutions.size;
 }

@@ -1,0 +1,36 @@
+graph TD
+    subgraph "Frontend (Vercel / Render)"
+        UI[React UI<br/>platform/client]
+    end
+
+    subgraph "Node.js API Gateway (Vercel / Render)"
+        TRPC[tRPC Server<br/>platform/server]
+        DB[(Drizzle ORM<br/>PostgreSQL)]
+        TRPC <--> DB
+    end
+
+    subgraph "Python AI Engine (Google Cloud Run / GPU Instance)"
+        FASTAPI[FastAPI Backend<br/>founder-autopilot/backend]
+        ORCH[Orchestrator Agent]
+        AGENTS[Specialized Agents<br/>WebDev, Stripe, Legal, etc.]
+        LLM((LLM Provider<br/>OpenAI / vLLM))
+        
+        FASTAPI --> ORCH
+        ORCH --> AGENTS
+        AGENTS <--> LLM
+    end
+
+    UI <-->|tRPC / HTTP| TRPC
+    TRPC <-->|REST API Calls| FASTAPI
+    
+    classDef frontend fill:#61dafb,stroke:#333,stroke-width:2px,color:#000;
+    classDef nodejs fill:#339933,stroke:#333,stroke-width:2px,color:#fff;
+    classDef python fill:#3776ab,stroke:#333,stroke-width:2px,color:#fff;
+    classDef db fill:#336791,stroke:#333,stroke-width:2px,color:#fff;
+    classDef llm fill:#10a37f,stroke:#333,stroke-width:2px,color:#fff;
+
+    class UI frontend;
+    class TRPC nodejs;
+    class FASTAPI,ORCH,AGENTS python;
+    class DB db;
+    class LLM llm;

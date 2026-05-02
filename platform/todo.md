@@ -16,6 +16,9 @@
 - [x] Wire Run Workflow button to execute actual LaunchOps agents
 - [x] Stream real-time agent output to canvas nodes via SSE
 - [ ] Export/import workflow definitions
+- [ ] Refactor pythonBridge.ts to use HTTP calls to FastAPI backend instead of spawning child processes
+- [ ] Update docker-compose.yml to run React UI, Node.js API Gateway, and Python FastAPI Backend
+- [ ] Test end-to-end integration between Node.js UI and Python backend
 - [ ] Deploy to production domain (thesoloprenuerforge.com)
 - [ ] Update README with graphical UI instructions
 - [ ] Video walkthrough for documentary
