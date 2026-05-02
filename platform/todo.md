@@ -132,3 +132,5 @@
 - [ ] Fix Caddyfile email parsing error
 
 - [ ] Update Caddyfile to use :80
+
+- [ ] Fix Stripe initialization in platform code

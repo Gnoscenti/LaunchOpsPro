@@ -8,9 +8,12 @@
 
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2026-04-22.dahlia",
-});
+// Initialize Stripe only if the key is provided, otherwise create a dummy object
+// to prevent the app from crashing on startup when the key is missing.
+const stripeKey = process.env.STRIPE_SECRET_KEY || "";
+const stripe = stripeKey 
+  ? new Stripe(stripeKey, { apiVersion: "2025-01-27.acacia" as any }) 
+  : ({} as Stripe);
 
 export { stripe };
 
