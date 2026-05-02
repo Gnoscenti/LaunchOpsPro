@@ -82,6 +82,7 @@ def build_system(config_path: str = None) -> dict:
         "growth_agent": "agents.growth_agent.GrowthAgent",
         "analytics_agent": "agents.analytics_agent.AnalyticsAgent",
         "email_agent": "agents.email_agent.EmailAgent",
+        "openclaw_agent": "agents.openclaw_agent.OpenClawAgent",
     }
     for agent_name, module_path in optional_agents.items():
         try:

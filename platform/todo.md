@@ -113,3 +113,9 @@
 - [x] Write vitest tests for Stripe integration (23 tests)
 - [x] Payment History page: invoice list from Stripe API with status badges, amounts, PDF download, hosted invoice links
 - [x] Vitest: 138 tests passing across 7 test files (stripeIntegration, revenueFeatures, subscriptionTiers, agentPipeline, routers, auth, credentials)
+
+- [ ] Integrate OpenClaw via WebSocket into Python FastAPI backend
+  - WebSocket URL: `wss://b86603c0-67a5-4338-891a-a0de531a0cfc.vultropenclaw.com`
+  - Gateway Token: `6pUyk82skXQrbe6TBeOM`
+  - Default Session Key: `agent:main:main`
+- [ ] Prepare Vultr deployment scripts (`deploy.sh` and update `docker-compose.yml`)
