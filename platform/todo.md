@@ -16,9 +16,6 @@
 - [x] Wire Run Workflow button to execute actual LaunchOps agents
 - [x] Stream real-time agent output to canvas nodes via SSE
 - [ ] Export/import workflow definitions
-- [ ] Refactor pythonBridge.ts to use HTTP calls to FastAPI backend instead of spawning child processes
-- [ ] Update docker-compose.yml to run React UI, Node.js API Gateway, and Python FastAPI Backend
-- [ ] Test end-to-end integration between Node.js UI and Python backend
 - [ ] Deploy to production domain (thesoloprenuerforge.com)
 - [ ] Update README with graphical UI instructions
 - [ ] Video walkthrough for documentary
@@ -111,26 +108,8 @@
 - [x] Add Stripe Customer Portal for self-service subscription management
 - [x] Sync Stripe subscription status to DB subscriptionTier field
 - [x] Write vitest tests for Stripe integration (23 tests)
+- [x] Wire hardcoded Stripe Product/Price IDs from sandbox (no more lazy creation)
+- [x] Add getTierIdFromPriceId and getTierIdFromProductId reverse-lookup helpers
+- [x] Update webhook to use exact ID matching instead of price-amount heuristic
 - [x] Payment History page: invoice list from Stripe API with status badges, amounts, PDF download, hosted invoice links
 - [x] Vitest: 138 tests passing across 7 test files (stripeIntegration, revenueFeatures, subscriptionTiers, agentPipeline, routers, auth, credentials)
-
-- [ ] Integrate OpenClaw via WebSocket into Python FastAPI backend
-  - WebSocket URL: `wss://b86603c0-67a5-4338-891a-a0de531a0cfc.vultropenclaw.com`
-  - Gateway Token: `6pUyk82skXQrbe6TBeOM`
-  - Default Session Key: `agent:main:main`
-- [ ] Prepare Vultr deployment scripts (`deploy.sh` and update `docker-compose.yml`)
-
-- [ ] Add Caddy to docker-compose.yml for automatic HTTPS
-- [ ] Create Caddyfile configuration
-- [ ] Update vultr_deploy.sh to prompt for domain and configure Caddy
-
-- [ ] Fix Docker build error by removing wouter patch from package.json
-
-- [ ] Check Vultr firewall rules using API
-- [ ] Add firewall rules for ports 80 and 443 if missing
-
-- [ ] Fix Caddyfile email parsing error
-
-- [ ] Update Caddyfile to use :80
-
-- [ ] Fix Stripe initialization in platform code

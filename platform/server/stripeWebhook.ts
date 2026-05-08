@@ -11,7 +11,7 @@
  */
 
 import { Router, Request, Response } from "express";
-import { stripe } from "./stripeProducts";
+import { stripe, getTierIdFromPriceId, getTierIdFromProductId } from "./stripeProducts";
 import * as db from "./db";
 import type Stripe from "stripe";
 
@@ -23,18 +23,30 @@ export const stripeWebhookRouter = Router();
 
 /**
  * Determine the subscription tier from a Stripe subscription object.
- * Looks at the price metadata or amount to map to our tier.
+ * Uses direct Price ID and Product ID lookup against our hardcoded IDs.
+ * Falls back to price-amount heuristic if IDs don't match.
  */
-async function determineTierFromSubscription(
+function determineTierFromSubscription(
   subscription: Stripe.Subscription
-): Promise<"explorer" | "founder" | "governance" | "enterprise"> {
+): "explorer" | "founder" | "governance" | "enterprise" {
   const item = subscription.items.data[0];
   if (!item) return "explorer";
 
   const price = item.price;
-  const amount = price.unit_amount || 0;
 
-  // Map by price amount (cents)
+  // 1. Try exact Price ID match
+  const tierByPrice = getTierIdFromPriceId(price.id);
+  if (tierByPrice) return tierByPrice;
+
+  // 2. Try exact Product ID match
+  const productId = typeof price.product === "string" ? price.product : price.product?.id;
+  if (productId) {
+    const tierByProduct = getTierIdFromProductId(productId);
+    if (tierByProduct) return tierByProduct;
+  }
+
+  // 3. Fallback: map by price amount (cents)
+  const amount = price.unit_amount || 0;
   if (amount >= 100000) return "enterprise"; // $1000+
   if (amount >= 20000) return "governance"; // $200+
   if (amount >= 3000) return "founder"; // $30+
@@ -138,7 +150,7 @@ stripeWebhookRouter.post(
           if (subscriptionId) {
             // Fetch the full subscription to determine the tier
             const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-            const tier = await determineTierFromSubscription(subscription);
+            const tier = determineTierFromSubscription(subscription);
 
             await db.updateUserTier(
               user.id,
@@ -169,7 +181,7 @@ stripeWebhookRouter.post(
           }
 
           if (subscription.status === "active" || subscription.status === "trialing") {
-            const tier = await determineTierFromSubscription(subscription);
+            const tier = determineTierFromSubscription(subscription);
             await db.updateUserTier(user.id, tier, customerId, subscription.id);
             console.log(`[Stripe Webhook] User ${user.id} subscription updated to ${tier}`);
           } else if (

@@ -2,18 +2,14 @@
  * Stripe Product & Price Configuration
  * =====================================
  * Centralized definitions for all subscription tiers.
- * Products and prices are created lazily on first checkout via ensureStripeProducts().
- * IDs are cached in memory after first creation.
+ * Product and Price IDs are pre-configured from the Stripe sandbox.
  */
 
 import Stripe from "stripe";
 
-// Initialize Stripe only if the key is provided, otherwise create a dummy object
-// to prevent the app from crashing on startup when the key is missing.
-const stripeKey = process.env.STRIPE_SECRET_KEY || "";
-const stripe = stripeKey 
-  ? new Stripe(stripeKey, { apiVersion: "2025-01-27.acacia" as any }) 
-  : ({} as Stripe);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
+  apiVersion: "2026-04-22.dahlia",
+});
 
 export { stripe };
 
@@ -24,6 +20,8 @@ export interface StripeTierProduct {
   name: string;
   description: string;
   priceAmountCents: number; // monthly price in cents
+  productId: string; // Stripe product ID
+  priceId: string; // Stripe recurring price ID
   features: string[];
 }
 
@@ -32,8 +30,10 @@ export const STRIPE_TIER_PRODUCTS: StripeTierProduct[] = [
     tierId: "founder",
     name: "Founder Autopilot",
     description:
-      "Unlimited reports, all 25 agents, full pipeline, priority execution, email support.",
+      "AI-powered business orchestration for founders. 25 reports/month, full agent access, Naming Contest, Documentary Tracker, Founder Score analytics.",
     priceAmountCents: 4900, // $49/mo
+    productId: "prod_URdypveNM0oR16",
+    priceId: "price_1TSkgvKnsQ10RdBLsCrJ1kiv",
     features: [
       "Unlimited reports & executions",
       "All 25 agents unlocked",
@@ -46,10 +46,12 @@ export const STRIPE_TIER_PRODUCTS: StripeTierProduct[] = [
   },
   {
     tierId: "governance",
-    name: "Governance Pro",
+    name: "Governance Shield",
     description:
-      "Everything in Founder + ProofGuard, HITL gates, compliance exports, documentary-ready proofs.",
+      "Full ProofGuard governance with immutable attestation audit trails, CQS scoring, HITL approval gates, unlimited reports, priority support, and compliance-grade documentation.",
     priceAmountCents: 29900, // $299/mo
+    productId: "prod_URdyycoqgM2CxE",
+    priceId: "price_1TSkh7KnsQ10RdBLLgzgum4U",
     features: [
       "Everything in Founder Autopilot",
       "ProofGuard governance engine",
@@ -63,12 +65,14 @@ export const STRIPE_TIER_PRODUCTS: StripeTierProduct[] = [
   },
   {
     tierId: "enterprise",
-    name: "Enterprise",
+    name: "Enterprise Command",
     description:
-      "White-label, custom agents, dedicated account manager, 99.9% SLA, SSO/SAML, on-premise option.",
+      "White-label deployment, dedicated account manager, custom agent development, SLA guarantees, multi-tenant architecture, API access, and full platform customization.",
     priceAmountCents: 150000, // $1,500/mo
+    productId: "prod_URdznUXhHGPFNJ",
+    priceId: "price_1TSkhKKnsQ10RdBLF43nD35i",
     features: [
-      "Everything in Governance Pro",
+      "Everything in Governance Shield",
       "White-label deployment",
       "Custom agent development",
       "Dedicated account manager",
@@ -80,108 +84,51 @@ export const STRIPE_TIER_PRODUCTS: StripeTierProduct[] = [
   },
 ];
 
-// ─── Cached Stripe IDs (populated on first call) ───────────────────────
-
-interface CachedIds {
-  productId: string;
-  priceId: string;
-}
-
-const priceCache = new Map<string, CachedIds>();
-
-/**
- * Find or create Stripe Product + Price for a given tier.
- * Uses metadata lookup to avoid duplicates across restarts.
- */
-async function findOrCreateProduct(
-  tier: StripeTierProduct
-): Promise<CachedIds> {
-  // Check cache first
-  const cached = priceCache.get(tier.tierId);
-  if (cached) return cached;
-
-  // Search for existing product by metadata
-  const existingProducts = await stripe.products.search({
-    query: `metadata["tier_id"]:"${tier.tierId}"`,
-  });
-
-  let productId: string;
-  let priceId: string;
-
-  if (existingProducts.data.length > 0) {
-    const product = existingProducts.data[0];
-    productId = product.id;
-
-    // Find the active monthly price
-    const prices = await stripe.prices.list({
-      product: productId,
-      active: true,
-      type: "recurring",
-      limit: 1,
-    });
-
-    if (prices.data.length > 0) {
-      priceId = prices.data[0].id;
-    } else {
-      // Create price if missing
-      const price = await stripe.prices.create({
-        product: productId,
-        unit_amount: tier.priceAmountCents,
-        currency: "usd",
-        recurring: { interval: "month" },
-      });
-      priceId = price.id;
-    }
-  } else {
-    // Create new product + price
-    const product = await stripe.products.create({
-      name: tier.name,
-      description: tier.description,
-      metadata: {
-        tier_id: tier.tierId,
-        platform: "atlas_orchestrator",
-      },
-    });
-    productId = product.id;
-
-    const price = await stripe.prices.create({
-      product: productId,
-      unit_amount: tier.priceAmountCents,
-      currency: "usd",
-      recurring: { interval: "month" },
-    });
-    priceId = price.id;
-  }
-
-  const ids = { productId, priceId };
-  priceCache.set(tier.tierId, ids);
-  return ids;
-}
-
-/**
- * Ensure all Stripe products and prices exist.
- * Call this once at startup or before first checkout.
- */
-export async function ensureStripeProducts(): Promise<
-  Map<string, CachedIds>
-> {
-  for (const tier of STRIPE_TIER_PRODUCTS) {
-    await findOrCreateProduct(tier);
-  }
-  return priceCache;
-}
+// ─── Direct ID Lookup (no API calls needed) ───────────────────────────
 
 /**
  * Get the Stripe Price ID for a specific tier.
- * Will create the product/price if it doesn't exist yet.
+ * Direct lookup — no API calls, no lazy creation.
  */
-export async function getStripePriceId(
+export function getStripePriceId(
   tierId: "founder" | "governance" | "enterprise"
-): Promise<string> {
+): string {
   const tier = STRIPE_TIER_PRODUCTS.find((t) => t.tierId === tierId);
   if (!tier) throw new Error(`Unknown tier: ${tierId}`);
-  const ids = await findOrCreateProduct(tier);
-  return ids.priceId;
+  return tier.priceId;
+}
+
+/**
+ * Get the Stripe Product ID for a specific tier.
+ */
+export function getStripeProductId(
+  tierId: "founder" | "governance" | "enterprise"
+): string {
+  const tier = STRIPE_TIER_PRODUCTS.find((t) => t.tierId === tierId);
+  if (!tier) throw new Error(`Unknown tier: ${tierId}`);
+  return tier.productId;
+}
+
+/**
+ * Resolve a Stripe Price ID back to a tier ID.
+ * Used by webhooks to determine which tier a subscription belongs to.
+ */
+export function getTierIdFromPriceId(
+  priceId: string
+): "founder" | "governance" | "enterprise" | null {
+  const tier = STRIPE_TIER_PRODUCTS.find((t) => t.priceId === priceId);
+  return tier ? tier.tierId : null;
+}
+
+/**
+ * Resolve a Stripe Product ID back to a tier ID.
+ * Used by webhooks as fallback when price ID doesn't match.
+ */
+export function getTierIdFromProductId(
+  productId: string
+): "founder" | "governance" | "enterprise" | null {
+  const tier = STRIPE_TIER_PRODUCTS.find((t) => t.productId === productId);
+  return tier ? tier.tierId : null;
 }
 
 /**

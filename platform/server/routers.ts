@@ -655,7 +655,7 @@ const subscriptionRouter = router({
     }))
     .mutation(async ({ ctx, input }) => {
       const { getStripePriceId, getOrCreateStripeCustomer, stripe } = await import('./stripeProducts');
-      const priceId = await getStripePriceId(input.tierId);
+      const priceId = getStripePriceId(input.tierId);
 
       // Get or create Stripe customer
       const sub = await db.getUserSubscription(ctx.user.id);
