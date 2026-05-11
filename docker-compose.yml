@@ -6,17 +6,12 @@ services:
     container_name: launchops-python-backend
     ports:
       - "8001:8001"
-    volumes:
-      - ./backend:/app
-      - /app/.venv
+    env_file:
+      - .env
     environment:
-      - MOCK_MODE=true
-      - OPENAI_API_KEY=EMPTY
-      - OPENAI_API_BASE=http://host.docker.internal:8000/v1
-      - OPENAI_MODEL=Qwen/Qwen2.5-7B-Instruct
-      - DASHBOARD_ORIGIN=http://localhost:5000
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - MOCK_MODE=${MOCK_MODE:-true}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-EMPTY}
+      - DASHBOARD_ORIGIN=http://localhost:3000
     restart: unless-stopped
 
   platform:
@@ -29,15 +24,10 @@ services:
     container_name: launchops-platform
     ports:
       - "3000:3000"
-    volumes:
-      - ./platform:/app
-      - /app/node_modules
     environment:
+      - NODE_ENV=production
       - FASTAPI_URL=http://python-backend:8001
-      - DATABASE_URL=sqlite:///sqlite.db
-      - SESSION_SECRET=super-secret-key-for-dev
-      - VITE_OAUTH_PORTAL_URL=https://manus.im
-      - VITE_APP_ID=4iPmRVDpMGdA4fQCzYmfK5
+      - PORT=3000
     depends_on:
       - python-backend
     restart: unless-stopped
