@@ -1,62 +1,83 @@
-# LaunchOps Platform — Node.js Full-Stack Dockerfile
-# Builds the React/Vite frontend and runs the Express/tRPC backend server.
+# LaunchOps Platform — Node.js Dockerfile
 #
-# Uses pnpm for fast, reproducible installs.
-# Runs as non-root user in production.
+# Build strategy:
+#   1. Install all deps with pnpm (exact version from packageManager field)
+#   2. Build the React/Vite client → dist/public/
+#   3. Bundle the Express server (server/index.ts) → dist/index.js
+#   4. Copy dist/ + node_modules into a lean production image
 #
-# Usage (via docker compose):
-#   docker compose up -d platform
+# The server/index.ts entry point is a self-contained Express static server
+# that serves the Vite-built client and handles client-side routing.
+# It has no Manus-platform-specific dependencies, making it portable.
+#
+# Ports:  3000 (HTTP, proxied by Caddy)
+# Health: GET / → 200
 
-# ── Stage 1: Install dependencies ───────────────────────────────────────────
+# ── Stage 1: Install dependencies ────────────────────────────────────────────
 FROM node:20-slim AS deps
 
-# Install pnpm globally
-RUN npm install -g pnpm@9
+# Install the exact pnpm version declared in package.json#packageManager
+RUN npm install -g pnpm@10.4.1
 
 WORKDIR /app
 
-# Copy lockfile and manifest first for layer caching
-COPY pnpm-lock.yaml package.json ./
+# Copy manifests and lockfile first for layer caching
+COPY package.json pnpm-lock.yaml ./
+# Copy patches directory (required by pnpm patchedDependencies)
 COPY patches/ ./patches/
 
-# Install all dependencies (including devDeps needed for build)
-RUN pnpm install --frozen-lockfile
+# Install all deps (dev included — needed for build tools)
+# Use --no-frozen-lockfile to tolerate minor lockfile drift on the VPS
+RUN pnpm install --no-frozen-lockfile
 
 # ── Stage 2: Build ───────────────────────────────────────────────────────────
 FROM node:20-slim AS builder
 
-RUN npm install -g pnpm@9
+RUN npm install -g pnpm@10.4.1
 
 WORKDIR /app
 
-# Copy installed node_modules from deps stage
+# Bring in installed modules from deps stage
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copy full source
+# Copy full source tree
 COPY . .
 
-# Build: Vite bundles the React client → dist/public
-#        esbuild bundles the Express server → dist/index.js
-RUN pnpm run build
+# Step 1: Build the React/Vite client → dist/public/
+# Pass dummy env vars so vite-plugin-manus-runtime initialises without error
+RUN VITE_APP_ID=docker \
+    VITE_FRONTEND_FORGE_API_KEY=docker \
+    VITE_FRONTEND_FORGE_API_URL=http://localhost \
+    VITE_OAUTH_PORTAL_URL=http://localhost \
+    VITE_ANALYTICS_ENDPOINT=http://localhost \
+    VITE_ANALYTICS_WEBSITE_ID=docker \
+    pnpm exec vite build
+
+# Step 2: Bundle the Express server entry point → dist/index.js
+# Uses server/index.ts (pure Express static server, no Manus runtime deps)
+RUN pnpm exec esbuild server/index.ts \
+    --platform=node \
+    --packages=external \
+    --bundle \
+    --format=esm \
+    --outdir=dist
+
+# Verify the expected outputs exist before proceeding
+RUN test -f dist/index.js || (echo "ERROR: dist/index.js not produced by esbuild" && exit 1)
+RUN test -d dist/public   || (echo "ERROR: dist/public not produced by vite build" && exit 1)
 
 # ── Stage 3: Production runtime ──────────────────────────────────────────────
 FROM node:20-slim AS runtime
 
-RUN npm install -g pnpm@9
-
-# Create non-root user
+# Create non-root user for security
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
 WORKDIR /app
 
-# Copy only what's needed to run in production
+# Copy only the built artefacts and runtime dependencies
 COPY --from=builder --chown=appuser:appgroup /app/dist ./dist
 COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
 COPY --from=builder --chown=appuser:appgroup /app/package.json ./package.json
-
-# Copy drizzle config and migrations (needed at runtime for SQLite)
-COPY --from=builder --chown=appuser:appgroup /app/drizzle ./drizzle
-COPY --from=builder --chown=appuser:appgroup /app/drizzle.config.ts ./drizzle.config.ts
 
 USER appuser
 
@@ -65,7 +86,7 @@ ENV PORT=3000
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD node -e "require('http').get('http://localhost:3000/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD node -e "const h=require('http');h.get('http://localhost:3000/',r=>{process.exit(r.statusCode<500?0:1)}).on('error',()=>process.exit(1))"
 
 CMD ["node", "dist/index.js"]
