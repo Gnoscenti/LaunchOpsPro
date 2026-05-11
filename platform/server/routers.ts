@@ -917,6 +917,15 @@ const agentRegistryRouter = router({
         status: "pending",
         totalSteps: 1,
       });
+      // Create step execution record for the single step
+      const steps = await db.listSteps(workflow.id);
+      for (const step of steps) {
+        await db.createStepExecution({
+          executionId: execution.id,
+          stepId: step.id,
+          status: "pending",
+        });
+      }
 
       return {
         workflowId: workflow.id,

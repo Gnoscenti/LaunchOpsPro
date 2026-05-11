@@ -1,18 +1,47 @@
 {
-    email {$CADDY_EMAIL:admin@example.com}
+    email admin@example.com
 }
-
 :80 {
-    # Route API requests to the Python backend
-    handle /api/* {
+    # Route tRPC API requests to the Node.js platform (full server)
+    handle /api/trpc/* {
+        reverse_proxy platform:3000
+    }
+
+    # Route OAuth callbacks to the platform
+    handle /api/oauth/* {
+        reverse_proxy platform:3000
+    }
+
+    # Route execution engine SSE and API to the platform
+    handle /api/execute/* {
+        reverse_proxy platform:3000
+    }
+
+    # Route agent registry API to the platform
+    handle /api/agents* {
+        reverse_proxy platform:3000
+    }
+
+    # Route Stripe webhooks to the platform
+    handle /api/stripe/* {
+        reverse_proxy platform:3000
+    }
+
+    # Route Python backend API (run, status, health)
+    handle /api/run {
         reverse_proxy python-backend:8001
     }
-    
-    handle /atlas/* {
+    handle /api/runs {
+        reverse_proxy python-backend:8001
+    }
+    handle /api/status {
+        reverse_proxy python-backend:8001
+    }
+    handle /health {
         reverse_proxy python-backend:8001
     }
 
-    # Route everything else to the Node.js platform
+    # Route everything else to the Node.js platform (serves SPA)
     handle {
         reverse_proxy platform:3000
     }

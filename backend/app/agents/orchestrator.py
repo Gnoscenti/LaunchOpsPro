@@ -76,14 +76,14 @@ class OrchestratorAgent:
             elif step_name == "website":
                 description = f"Deploy {config.get('stack', 'nextjs')} website on {config.get('hosting', 'vercel')}"
                 
-            task = TaskNode(
+            task = Task(
                 id=task_id,
-                title=f"{step_name.title()} Setup",
+                name=f"{step_name.title()} Setup",
                 description=description,
-                agent_name=self._map_step_to_agent(step_name),
-                dependencies=[previous_task_id] if previous_task_id else []
+                dependencies=[previous_task_id] if previous_task_id else [],
+                metadata={"agent_name": self._map_step_to_agent(step_name)}
             )
-            graph.add_task(task)
+            graph.add_task(task, depends_on=[previous_task_id] if previous_task_id else None)
             previous_task_id = task_id
             
         return graph

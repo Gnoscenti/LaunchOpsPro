@@ -87,17 +87,17 @@ const providers: Map<LLMProvider, ProviderConfig> = new Map([
 
 const MODEL_MAP: Record<ModelPreference, Record<LLMProvider, string>> = {
   fast: {
-    forge: "gemini-2.5-flash",
+    forge: "gpt-4.1-mini",
     anthropic: "claude-sonnet-4-20250514",
     huggingface: "meta-llama/Llama-3.3-70B-Instruct",
   },
   balanced: {
-    forge: "gemini-2.5-flash",
+    forge: "gpt-4.1-mini",
     anthropic: "claude-sonnet-4-20250514",
     huggingface: "meta-llama/Llama-3.3-70B-Instruct",
   },
   "deep-reasoning": {
-    forge: "gemini-2.5-flash",
+    forge: "gpt-4.1-mini",
     anthropic: "claude-sonnet-4-20250514",
     huggingface: "meta-llama/Llama-3.3-70B-Instruct",
   },
@@ -155,7 +155,6 @@ async function callForge(request: LLMRequest, model: string): Promise<InvokeResu
       content: m.content,
     })),
     max_tokens: request.maxTokens ?? 32768,
-    thinking: { budget_tokens: 128 },
   };
 
   if (request.tools && request.tools.length > 0) {

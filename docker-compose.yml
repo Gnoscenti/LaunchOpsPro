@@ -1,4 +1,24 @@
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: launchops-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-RootLaunchOps2026!}
+      MYSQL_DATABASE: launchops
+      MYSQL_USER: launchops
+      MYSQL_PASSWORD: ${DB_PASSWORD:-LaunchOps2026!}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   python-backend:
     build:
       context: ./backend
@@ -9,9 +29,9 @@ services:
     env_file:
       - .env
     environment:
-      - MOCK_MODE=${MOCK_MODE:-true}
+      - MOCK_MODE=${MOCK_MODE:-false}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-EMPTY}
-      - DASHBOARD_ORIGIN=http://localhost:3000
+      - DASHBOARD_ORIGIN=http://137.220.36.18
     restart: unless-stopped
 
   platform:
@@ -21,16 +41,31 @@ services:
       args:
         - VITE_OAUTH_PORTAL_URL=https://manus.im
         - VITE_APP_ID=4iPmRVDpMGdA4fQCzYmfK5
+        - VITE_AUTH_DISABLED=true
     container_name: launchops-platform
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - FASTAPI_URL=http://python-backend:8001
       - PORT=3000
+      - DATABASE_URL=mysql://launchops:LaunchOps2026!@mysql:3306/launchops
+      - JWT_SECRET=launchops-self-hosted-secret-2026
+      - AUTH_BYPASS_ENABLED=true
+      - OWNER_OPEN_ID=self-hosted-admin
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-EMPTY}
+      - BUILT_IN_FORGE_API_URL=https://api.openai.com
+      - BUILT_IN_FORGE_API_KEY=${OPENAI_API_KEY:-EMPTY}
+      - FOUNDER_EDITION_DIR=/opt/launchops
+      - STRIPE_SECRET_KEY=sk_test_placeholder_not_configured
+      - STRIPE_WEBHOOK_SECRET=whsec_placeholder_not_configured
     depends_on:
-      - python-backend
+      mysql:
+        condition: service_healthy
+      python-backend:
+        condition: service_started
     restart: unless-stopped
+    volumes:
+      - /opt/launchops/agents:/opt/launchops/agents:ro
 
   caddy:
     image: caddy:2-alpine
@@ -51,3 +86,4 @@ services:
 volumes:
   caddy_data:
   caddy_config:
+  mysql_data:
