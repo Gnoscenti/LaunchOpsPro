@@ -305,6 +305,7 @@ executionRouter.post("/api/execute/:executionId/run", async (req: Request, res: 
             stepId: step.id,
             attestationId: attestation.attestationId,
             agentName,
+          agentId: step.agentId,
             cqsScore: attestation.cqsScore,
           });
 
@@ -500,6 +501,7 @@ executionRouter.post("/api/execute/:executionId/run", async (req: Request, res: 
           stepExecutionId: stepExec.id,
           label: step.label,
           agentName,
+          agentId: step.agentId,
           output,
           proofHash,
           executionMode,

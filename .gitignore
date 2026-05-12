@@ -69,3 +69,6 @@ temp/
 *.tmp
 mysql-init/
 artifacts/
+apply_changes.sh
+deploy_fix.sh
+patch_routers.py

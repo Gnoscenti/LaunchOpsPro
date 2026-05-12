@@ -206,7 +206,7 @@ const standardOutputSchema: AgentOutputSchema = {
       properties: {
         summary: { type: "string", description: "Brief summary of accomplishment" },
         actions: { type: "array", items: { type: "string" }, description: "Specific actions taken" },
-        outputs: { type: "object", additionalProperties: true, description: "Generated artifacts" },
+        outputs: { type: "object", additionalProperties: false, properties: { data: { type: "string", description: "Generated artifacts as JSON string" } }, required: ["data"], description: "Generated artifacts" },
         recommendations: { type: "array", items: { type: "string" }, description: "Next steps" },
       },
       required: ["summary", "actions", "outputs", "recommendations"],
@@ -400,7 +400,7 @@ registerAgent({
         properties: {
           summary: { type: "string", description: "Brief summary of accomplishment" },
           actions: { type: "array", items: { type: "string" }, description: "Specific actions taken" },
-          outputs: { type: "object", additionalProperties: true, description: "Generated artifacts" },
+          outputs: { type: "object", additionalProperties: false, properties: { data: { type: "string", description: "Generated artifacts as JSON string" } }, required: ["data"], description: "Generated artifacts" },
           recommendations: { type: "array", items: { type: "string" }, description: "Next steps" },
         },
         required: ["summary", "actions", "outputs", "recommendations"],

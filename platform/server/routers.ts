@@ -934,6 +934,110 @@ const agentRegistryRouter = router({
         message: `Quick launch started for ${agent.name}`,
       };
     }),
+  // ─── Launch Pipeline (Intake Form → Multi-Stage Workflow) ─────────────
+  launchPipeline: protectedProcedure
+    .input(
+      z.object({
+        businessName: z.string().min(1),
+        industry: z.string().min(1),
+        targetMarket: z.string().min(1),
+        businessModel: z.string().min(1),
+        goals: z.string().min(1),
+        budgetRange: z.string().optional(),
+        timeline: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const businessContext = {
+        businessName: input.businessName,
+        industry: input.industry,
+        targetMarket: input.targetMarket,
+        businessModel: input.businessModel,
+        goals: input.goals,
+        budgetRange: input.budgetRange ?? "Not specified",
+        timeline: input.timeline ?? "90-days",
+      };
+
+      const pipelineStages = [
+        {
+          agentId: "formation-advisor",
+          label: `Business Formation: ${input.businessName}`,
+          description: `Recommend optimal entity type, state of incorporation, and formation steps for ${input.businessName} — a ${input.businessModel} business in ${input.industry}. Target market: ${input.targetMarket}. Goals: ${input.goals}`,
+          sortOrder: 0,
+        },
+        {
+          agentId: "systems-agent",
+          label: `Infrastructure & Tech Stack: ${input.businessName}`,
+          description: `Design the technology stack, tools, domain, and hosting for ${input.businessName}. Business model: ${input.businessModel}. Industry: ${input.industry}. Budget: ${input.budgetRange ?? "lean/bootstrap"}. Timeline: ${input.timeline ?? "90 days"}`,
+          sortOrder: 1,
+        },
+        {
+          agentId: "stripe-agent",
+          label: `Payment Processing: ${input.businessName}`,
+          description: `Set up payment processing, pricing strategy, and revenue operations for ${input.businessName}. Business model: ${input.businessModel}. Target market: ${input.targetMarket}. Goals: ${input.goals}`,
+          sortOrder: 2,
+        },
+        {
+          agentId: "funding-intelligence",
+          label: `Funding Strategy: ${input.businessName}`,
+          description: `Analyze funding pathways for ${input.businessName} in ${input.industry}. Business model: ${input.businessModel}. Budget range: ${input.budgetRange ?? "Not specified"}. Goals: ${input.goals}`,
+          sortOrder: 3,
+        },
+        {
+          agentId: "execai-coach",
+          label: `Executive Coaching: ${input.businessName}`,
+          description: `Create a personalized 90-day action plan for the founder of ${input.businessName}. Industry: ${input.industry}. Business model: ${input.businessModel}. Target market: ${input.targetMarket}. Goals: ${input.goals}. Timeline: ${input.timeline ?? "90 days"}`,
+          sortOrder: 4,
+        },
+        {
+          agentId: "growth-agent",
+          label: `Growth & Marketing: ${input.businessName}`,
+          description: `Develop go-to-market strategy and growth plan for ${input.businessName}. Target market: ${input.targetMarket}. Industry: ${input.industry}. Business model: ${input.businessModel}. Budget: ${input.budgetRange ?? "lean/bootstrap"}. Goals: ${input.goals}`,
+          sortOrder: 5,
+        },
+      ];
+
+      const workflow = await db.createWorkflow({
+        userId: ctx.user.id,
+        name: `Launch: ${input.businessName}`,
+        description: `Full business launch pipeline for ${input.businessName} — ${input.industry} / ${input.businessModel}`,
+        version: "1.0",
+      });
+
+      for (const stage of pipelineStages) {
+        await db.createStep({
+          workflowId: workflow.id,
+          agentId: stage.agentId,
+          label: stage.label,
+          description: stage.description,
+          sortOrder: stage.sortOrder,
+          config: businessContext,
+        });
+      }
+
+      const execution = await db.createExecution({
+        workflowId: workflow.id,
+        userId: ctx.user.id,
+        status: "pending",
+        totalSteps: pipelineStages.length,
+      });
+
+      const steps = await db.listSteps(workflow.id);
+      for (const step of steps) {
+        await db.createStepExecution({
+          executionId: execution.id,
+          stepId: step.id,
+          status: "pending",
+        });
+      }
+
+      return {
+        workflowId: workflow.id,
+        executionId: execution.id,
+        stages: pipelineStages.length,
+        message: `Pipeline created for ${input.businessName} with ${pipelineStages.length} stages`,
+      };
+    }),
 });
 
 // ─── Dashboard Router ────────────────────────────────────────────────────

@@ -73,19 +73,20 @@ const RISK_BASE_SCORES: Record<string, number> = {
 
 // Agents that handle money, legal, or infrastructure get elevated scrutiny
 const HIGH_RISK_AGENTS = new Set([
-  "stripe-integration",
-  "formation-advisor",
+  // "stripe-integration",
+  // "formation-advisor",
   "paperwork-ip",
   "security-hardening",
   "funding-intelligence",
-  "paralegal-bot",
+  // "paralegal-bot",
 ]);
 
 // Agents that require HITL by default (payments, legal formation)
 const HITL_REQUIRED_AGENTS = new Set([
-  "stripe-integration",
-  "formation-advisor",
-  "paralegal-bot",
+  // Disabled for self-hosted demo mode
+  // "stripe-integration",
+  // "formation-advisor",
+  // "paralegal-bot",
 ]);
 
 // IMDA Model Governance Framework pillars
