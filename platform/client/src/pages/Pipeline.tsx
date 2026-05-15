@@ -46,6 +46,10 @@ import {
   ArrowRight,
   Shield,
   FileText,
+  Copy,
+  Check,
+  Download,
+  Wand2,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -354,6 +358,8 @@ function MissionControl({
   isComplete: boolean;
   onNewLaunch: () => void;
 }) {
+  // Local mutation for artifact generation
+  const launchPipeline = trpc.agentRegistry.launchPipeline.useMutation();
   const [expandedStages, setExpandedStages] = useState<Set<string>>(new Set());
 
   const toggleStage = (id: string) => {
@@ -400,58 +406,238 @@ function MissionControl({
     }
   };
 
-  const formatOutput = (output: Record<string, unknown>) => {
-    // Remove _meta from display
+  // Copy to clipboard helper
+  const [copiedStage, setCopiedStage] = useState<string | null>(null);
+  const [generatingArtifact, setGeneratingArtifact] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, stageId: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedStage(stageId);
+      toast.success("Copied to clipboard!");
+      setTimeout(() => setCopiedStage(null), 2000);
+    });
+  };
+
+  const getPlainTextOutput = (output: Record<string, unknown>): string => {
+    const { _meta, ...rest } = output;
+    const lines: string[] = [];
+    const flatten = (obj: unknown, prefix = ""): void => {
+      if (typeof obj === "string") {
+        lines.push(prefix ? `${prefix}: ${obj}` : obj);
+      } else if (Array.isArray(obj)) {
+        obj.forEach((item, i) => {
+          if (typeof item === "string") {
+            lines.push(`${prefix ? prefix + " " : ""}${i + 1}. ${item}`);
+          } else {
+            flatten(item, `${prefix}[${i + 1}]`);
+          }
+        });
+      } else if (typeof obj === "object" && obj !== null) {
+        Object.entries(obj).forEach(([key, val]) => {
+          const label = key.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+          if (typeof val === "string") {
+            lines.push(`\n## ${label}\n${val}`);
+          } else if (Array.isArray(val)) {
+            lines.push(`\n## ${label}`);
+            flatten(val, "");
+          } else if (typeof val === "object" && val !== null) {
+            lines.push(`\n## ${label}`);
+            flatten(val, "");
+          }
+        });
+      }
+    };
+    flatten(rest);
+    return lines.join("\n");
+  };
+
+  // Action button definitions per stage
+  const getActionButtons = (stageId: string): { label: string; icon: React.ReactNode; action: string }[] => {
+    const actions: Record<string, { label: string; icon: React.ReactNode; action: string }[]> = {
+      formation: [
+        { label: "Generate Articles of Incorporation PDF", icon: <FileText className="w-3 h-3" />, action: "articles_pdf" },
+        { label: "Generate Operating Agreement", icon: <FileText className="w-3 h-3" />, action: "operating_agreement" },
+      ],
+      infrastructure: [
+        { label: "Generate Project Structure", icon: <Wand2 className="w-3 h-3" />, action: "project_structure" },
+        { label: "Generate .env Template", icon: <FileText className="w-3 h-3" />, action: "env_template" },
+      ],
+      payments: [
+        { label: "Generate Stripe Integration Code", icon: <Wand2 className="w-3 h-3" />, action: "stripe_code" },
+        { label: "Generate Pricing Page HTML", icon: <FileText className="w-3 h-3" />, action: "pricing_page" },
+      ],
+      funding: [
+        { label: "Generate Pitch Deck Outline", icon: <Wand2 className="w-3 h-3" />, action: "pitch_deck" },
+        { label: "Generate Investor Email Sequence", icon: <FileText className="w-3 h-3" />, action: "investor_emails" },
+      ],
+      coaching: [
+        { label: "Generate 30-Day Calendar", icon: <Wand2 className="w-3 h-3" />, action: "calendar_30day" },
+        { label: "Generate Weekly Review Template", icon: <FileText className="w-3 h-3" />, action: "weekly_review" },
+      ],
+      growth: [
+        { label: "Generate Landing Page Copy", icon: <Wand2 className="w-3 h-3" />, action: "landing_page" },
+        { label: "Generate Social Media Posts", icon: <FileText className="w-3 h-3" />, action: "social_posts" },
+      ],
+    };
+    return actions[stageId] ?? [];
+  };
+
+  const handleGenerateArtifact = async (stageId: string, action: string, stageOutput: Record<string, unknown>) => {
+    setGeneratingArtifact(`${stageId}-${action}`);
+    toast.info("Generating artifact — this may take a moment...");
+    try {
+      // Use the quickLaunch endpoint with a specialized prompt
+      const artifactPrompt = `Based on the following business plan output, generate the specific artifact requested.\n\nBusiness: ${businessName}\nAction requested: ${action}\n\nPrevious output:\n${getPlainTextOutput(stageOutput)}\n\nGenerate the complete, ready-to-use artifact. Be extremely detailed and specific.`;
+      const result = await launchPipeline.mutateAsync({
+        businessName: businessName,
+        industry: "artifact-generation",
+        targetMarket: action,
+        businessModel: "artifact",
+        goals: artifactPrompt,
+        budgetRange: undefined,
+        timeline: undefined,
+      });
+      toast.success("Artifact generated! Check the new pipeline run.");
+    } catch (err) {
+      toast.error("Failed to generate artifact");
+    } finally {
+      setGeneratingArtifact(null);
+    }
+  };
+
+  const formatOutput = (output: Record<string, unknown>, stageId: string) => {
     const { _meta, ...displayOutput } = output;
     const meta = _meta as Record<string, unknown> | undefined;
-
-    // Try to extract summary/key fields for a cleaner display
     const summary = displayOutput.summary as string | undefined;
     const recommendations = displayOutput.recommendations as string[] | undefined;
     const actions = displayOutput.actions as string[] | undefined;
+    const outputs = displayOutput.outputs as Record<string, unknown> | string | undefined;
+    const plainText = getPlainTextOutput(output);
+    const actionButtons = getActionButtons(stageId);
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
+        {/* Copy Button */}
+        <div className="flex items-center gap-2 justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+            onClick={(e) => { e.stopPropagation(); copyToClipboard(plainText, stageId); }}
+          >
+            {copiedStage === stageId ? (
+              <><Check className="w-3 h-3 mr-1 text-emerald-400" />Copied!</>
+            ) : (
+              <><Copy className="w-3 h-3 mr-1" />Copy All</>
+            )}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-[10px] text-muted-foreground hover:text-foreground"
+            onClick={(e) => {
+              e.stopPropagation();
+              const blob = new Blob([plainText], { type: "text/plain" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = `${stageId}-${businessName.replace(/\s+/g, "-").toLowerCase()}.txt`;
+              a.click();
+              URL.revokeObjectURL(url);
+              toast.success("Downloaded!");
+            }}
+          >
+            <Download className="w-3 h-3 mr-1" />
+            Download
+          </Button>
+        </div>
+        {/* Summary */}
         {summary && (
-          <div>
-            <p className="text-[10px] font-[IBM_Plex_Mono] uppercase tracking-wider text-muted-foreground mb-1">Summary</p>
-            <p className="text-sm text-foreground leading-relaxed">{summary}</p>
+          <div className="bg-[oklch(0.12_0.005_250)] rounded-lg p-3">
+            <p className="text-[10px] font-[IBM_Plex_Mono] uppercase tracking-wider text-[oklch(0.75_0.15_85)] mb-1.5">Executive Summary</p>
+            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{summary}</p>
           </div>
         )}
+        {/* Actions */}
         {actions && actions.length > 0 && (
           <div>
-            <p className="text-[10px] font-[IBM_Plex_Mono] uppercase tracking-wider text-muted-foreground mb-1">Actions</p>
-            <ul className="space-y-1">
-              {(actions as (string | Record<string, unknown>)[]).slice(0, 8).map((action, i) => (
-                <li key={i} className="text-xs text-foreground/80 flex items-start gap-2">
-                  <span className="text-[oklch(0.75_0.15_85)] mt-0.5">&#9656;</span>
-                  <span>{typeof action === "string" ? action : JSON.stringify(action)}</span>
-                </li>
+            <p className="text-[10px] font-[IBM_Plex_Mono] uppercase tracking-wider text-muted-foreground mb-2">Deliverables & Actions</p>
+            <div className="space-y-1.5">
+              {(actions as (string | Record<string, unknown>)[]).map((action, i) => (
+                <div key={i} className="flex items-start gap-2 bg-[oklch(0.11_0.005_250)] rounded px-3 py-2">
+                  <span className="text-[oklch(0.75_0.15_85)] font-bold text-xs mt-0.5">{i + 1}.</span>
+                  <span className="text-xs text-foreground/90 leading-relaxed whitespace-pre-wrap">
+                    {typeof action === "string" ? action : JSON.stringify(action, null, 2)}
+                  </span>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
+        {/* Outputs (code, configs, etc.) */}
+        {outputs && typeof outputs === "object" && Object.keys(outputs).length > 0 && (
+          <div>
+            <p className="text-[10px] font-[IBM_Plex_Mono] uppercase tracking-wider text-muted-foreground mb-2">Generated Artifacts</p>
+            <div className="space-y-2">
+              {Object.entries(outputs).map(([key, val]) => (
+                <div key={key} className="bg-[oklch(0.08_0.005_250)] rounded-lg p-3 border border-border/30">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-[IBM_Plex_Mono] uppercase tracking-wider text-[oklch(0.75_0.15_85)]">
+                      {key.replace(/_/g, " ")}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 px-1.5 text-[9px]"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const text = typeof val === "string" ? val : JSON.stringify(val, null, 2);
+                        copyToClipboard(text, `${stageId}-${key}`);
+                      }}
+                    >
+                      {copiedStage === `${stageId}-${key}` ? <Check className="w-2.5 h-2.5 text-emerald-400" /> : <Copy className="w-2.5 h-2.5" />}
+                    </Button>
+                  </div>
+                  <pre className="text-[11px] text-foreground/80 whitespace-pre-wrap font-[IBM_Plex_Mono] overflow-auto max-h-48 leading-relaxed">
+                    {typeof val === "string" ? val : JSON.stringify(val, null, 2)}
+                  </pre>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {outputs && typeof outputs === "string" && (
+          <div className="bg-[oklch(0.08_0.005_250)] rounded-lg p-3 border border-border/30">
+            <pre className="text-[11px] text-foreground/80 whitespace-pre-wrap font-[IBM_Plex_Mono] overflow-auto max-h-64 leading-relaxed">
+              {outputs}
+            </pre>
+          </div>
+        )}
+        {/* Recommendations */}
         {recommendations && recommendations.length > 0 && (
           <div>
-            <p className="text-[10px] font-[IBM_Plex_Mono] uppercase tracking-wider text-muted-foreground mb-1">Recommendations</p>
-            <ul className="space-y-1">
-              {(recommendations as (string | Record<string, unknown>)[]).slice(0, 6).map((rec, i) => (
-                <li key={i} className="text-xs text-foreground/80 flex items-start gap-2">
+            <p className="text-[10px] font-[IBM_Plex_Mono] uppercase tracking-wider text-muted-foreground mb-2">Strategic Recommendations</p>
+            <div className="space-y-1.5">
+              {(recommendations as (string | Record<string, unknown>)[]).map((rec, i) => (
+                <div key={i} className="flex items-start gap-2 px-2 py-1.5">
                   <Sparkles className="w-3 h-3 text-[oklch(0.75_0.15_85)] mt-0.5 flex-shrink-0" />
-                  <span>{typeof rec === "string" ? rec : JSON.stringify(rec)}</span>
-                </li>
+                  <span className="text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                    {typeof rec === "string" ? rec : JSON.stringify(rec)}
+                  </span>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         )}
-        {!summary && !actions && !recommendations && (
-          <div>
-            <p className="text-[10px] font-[IBM_Plex_Mono] uppercase tracking-wider text-muted-foreground mb-1">Output</p>
-            <pre className="text-xs text-foreground/80 whitespace-pre-wrap font-[IBM_Plex_Mono] bg-[oklch(0.10_0.005_250)] p-3 rounded-lg overflow-auto max-h-64">
+        {/* Fallback for unstructured output */}
+        {!summary && !actions && !recommendations && !outputs && (
+          <div className="bg-[oklch(0.08_0.005_250)] rounded-lg p-3 border border-border/30">
+            <pre className="text-[11px] text-foreground/80 whitespace-pre-wrap font-[IBM_Plex_Mono] overflow-auto max-h-96 leading-relaxed">
               {JSON.stringify(displayOutput, null, 2)}
             </pre>
           </div>
         )}
+        {/* Meta info */}
         {meta && (
           <div className="flex items-center gap-3 pt-2 border-t border-border/50">
             <Badge variant="secondary" className="text-[9px]">
@@ -469,9 +655,38 @@ function MissionControl({
             )}
           </div>
         )}
+        {/* Action Buttons */}
+        {actionButtons.length > 0 && (
+          <div className="pt-3 border-t border-border/50">
+            <p className="text-[10px] font-[IBM_Plex_Mono] uppercase tracking-wider text-muted-foreground mb-2">Generate Artifacts</p>
+            <div className="flex flex-wrap gap-2">
+              {actionButtons.map((btn) => (
+                <Button
+                  key={btn.action}
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[10px] border-[oklch(0.35_0.10_85)] text-[oklch(0.75_0.15_85)] hover:bg-[oklch(0.75_0.15_85)]/10"
+                  disabled={generatingArtifact === `${stageId}-${btn.action}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleGenerateArtifact(stageId, btn.action, output);
+                  }}
+                >
+                  {generatingArtifact === `${stageId}-${btn.action}` ? (
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                  ) : (
+                    btn.icon
+                  )}
+                  <span className="ml-1">{btn.label}</span>
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
+
 
   return (
     <motion.div
@@ -641,7 +856,7 @@ function MissionControl({
                           transition={{ duration: 0.2 }}
                           className="mt-3 pt-3 border-t border-border/50"
                         >
-                          {formatOutput(stage.output)}
+                          {formatOutput(stage.output, stage.id)}
                         </motion.div>
                       )}
                     </AnimatePresence>

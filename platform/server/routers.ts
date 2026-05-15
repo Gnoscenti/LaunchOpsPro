@@ -962,37 +962,222 @@ const agentRegistryRouter = router({
         {
           agentId: "formation-advisor",
           label: `Business Formation: ${input.businessName}`,
-          description: `Recommend optimal entity type, state of incorporation, and formation steps for ${input.businessName} — a ${input.businessModel} business in ${input.industry}. Target market: ${input.targetMarket}. Goals: ${input.goals}`,
+          description: `You are producing SPECIFIC, READY-TO-USE legal formation deliverables for "${input.businessName}" — a ${input.businessModel} business in ${input.industry} targeting ${input.targetMarket}.
+
+PRODUCE THESE EXACT DELIVERABLES:
+1. ARTICLES OF INCORPORATION — Write the actual draft text with all required clauses (company name, purpose, registered agent placeholder, authorized shares, incorporator info). Format it as a ready-to-file document.
+2. ENTITY RECOMMENDATION — Explain exactly WHY you chose this entity type for their specific situation (${input.businessModel} in ${input.industry}).
+3. FILING CHECKLIST — Step-by-step with exact URLs (e.g., https://icis.corp.delaware.gov/ecorp/entitysearch/namesearch.aspx for Delaware name search). Include exact costs.
+4. EIN APPLICATION STEPS — Exact IRS URL (https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online), what to select at each step.
+5. OPERATING AGREEMENT TEMPLATE — Write a complete single-member LLC operating agreement OR corporate bylaws template with blanks for their specific details.
+6. IMMEDIATE NEXT ACTIONS — Numbered list of exactly what to do TODAY, with time estimates.
+
+Business goals: ${input.goals}
+Budget: ${input.budgetRange ?? "lean/bootstrap"}
+Timeline: ${input.timeline ?? "90 days"}
+
+Be EXTREMELY specific. Include actual URLs, actual dollar amounts, actual document text. No generic advice.`,
           sortOrder: 0,
         },
         {
           agentId: "systems-agent",
           label: `Infrastructure & Tech Stack: ${input.businessName}`,
-          description: `Design the technology stack, tools, domain, and hosting for ${input.businessName}. Business model: ${input.businessModel}. Industry: ${input.industry}. Budget: ${input.budgetRange ?? "lean/bootstrap"}. Timeline: ${input.timeline ?? "90 days"}`,
+          description: `You are producing SPECIFIC, READY-TO-EXECUTE infrastructure deliverables for "${input.businessName}" — a ${input.businessModel} in ${input.industry}.
+
+PRODUCE THESE EXACT DELIVERABLES:
+1. TECH STACK DECISION MATRIX — Table with: Tool | Purpose | Monthly Cost | Setup Time | Why This Over Alternatives. Keep total under $200/mo for first 90 days.
+2. EXACT SETUP COMMANDS — Terminal commands to run. Example format:
+   \`\`\`bash
+   # Set up project
+   npx create-next-app@latest ${input.businessName.toLowerCase().replace(/\s+/g, '-')} --typescript --tailwind
+   cd ${input.businessName.toLowerCase().replace(/\s+/g, '-')}
+   npm install stripe @auth/nextjs prisma
+   \`\`\`
+3. DOMAIN & HOSTING SETUP — Specific domain name suggestions (check format: ${input.businessName.toLowerCase().replace(/\s+/g, '')}.com, .ai, .io), exact hosting provider with pricing, DNS setup steps.
+4. CRM PIPELINE CONFIGURATION — Exact stages, automation rules, and email templates for their target market (${input.targetMarket}).
+5. PROJECT STRUCTURE — Actual file/folder structure they should create:
+   \`\`\`
+   ${input.businessName.toLowerCase().replace(/\s+/g, '-')}/
+   ├── src/
+   │   ├── app/
+   │   ├── components/
+   │   ├── lib/
+   │   └── ...
+   \`\`\`
+6. ENVIRONMENT VARIABLES TEMPLATE — .env.example with all required keys listed.
+7. TWO-WEEK SPRINT PLAN — Day-by-day with specific deliverables and time estimates.
+
+Target market: ${input.targetMarket}
+Goals: ${input.goals}
+Budget: ${input.budgetRange ?? "lean/bootstrap"}
+
+Be EXTREMELY specific. Actual commands, actual URLs, actual config files. No generic advice.`,
           sortOrder: 1,
         },
         {
           agentId: "stripe-agent",
           label: `Payment Processing: ${input.businessName}`,
-          description: `Set up payment processing, pricing strategy, and revenue operations for ${input.businessName}. Business model: ${input.businessModel}. Target market: ${input.targetMarket}. Goals: ${input.goals}`,
+          description: `You are producing SPECIFIC, READY-TO-USE payment processing deliverables for "${input.businessName}" — a ${input.businessModel} targeting ${input.targetMarket}.
+
+PRODUCE THESE EXACT DELIVERABLES:
+1. PRICING TABLE — Exact tiers with names, prices, and features. Format:
+   | Tier | Monthly Price | Annual Price | Features |
+   Design pricing specifically for ${input.targetMarket} in ${input.industry}.
+
+2. STRIPE SETUP STEPS — Exact sequence:
+   - Go to https://dashboard.stripe.com/register
+   - Create products via API or dashboard (provide exact product JSON)
+   - Set up checkout sessions
+
+3. STRIPE INTEGRATION CODE — Ready-to-paste code snippets:
+   \`\`\`typescript
+   // Create checkout session
+   const session = await stripe.checkout.sessions.create({
+     line_items: [{ price: 'price_xxx', quantity: 1 }],
+     mode: 'subscription',
+     success_url: 'https://yoursite.com/success',
+     cancel_url: 'https://yoursite.com/cancel',
+   });
+   \`\`\`
+
+4. REVENUE MODEL — Monthly projections for months 1-12 based on their business model (${input.businessModel}) and target market.
+
+5. PAYMENT FLOW DIAGRAM — Text-based flow: Customer → Checkout → Payment → Fulfillment → Recurring
+
+6. WEBHOOK SETUP — Exact webhook events to listen for and handler code.
+
+7. PRICING PSYCHOLOGY — Why these specific price points work for ${input.targetMarket}.
+
+Goals: ${input.goals}
+Budget: ${input.budgetRange ?? "lean/bootstrap"}
+
+Include actual code, actual Stripe API calls, actual pricing numbers. No generic advice.`,
           sortOrder: 2,
         },
         {
           agentId: "funding-intelligence",
           label: `Funding Strategy: ${input.businessName}`,
-          description: `Analyze funding pathways for ${input.businessName} in ${input.industry}. Business model: ${input.businessModel}. Budget range: ${input.budgetRange ?? "Not specified"}. Goals: ${input.goals}`,
+          description: `You are producing SPECIFIC, READY-TO-USE funding deliverables for "${input.businessName}" — a ${input.businessModel} in ${input.industry}.
+
+PRODUCE THESE EXACT DELIVERABLES:
+1. PITCH DECK OUTLINE — Exact slides with content for each:
+   Slide 1: Title — "${input.businessName}: [tagline]"
+   Slide 2: Problem — [specific problem for ${input.targetMarket}]
+   Slide 3: Solution — [your specific solution]
+   Slide 4: Market Size — [TAM/SAM/SOM with actual numbers for ${input.industry}]
+   Slide 5: Business Model — [revenue streams]
+   Slide 6: Traction — [milestones to hit]
+   Slide 7: Team — [what to highlight]
+   Slide 8: Ask — [specific amount and use of funds]
+
+2. INVESTOR EMAIL TEMPLATE — Ready-to-send cold outreach email:
+   Subject line, body, and follow-up sequence (3 emails).
+
+3. FUNDING ROADMAP — Timeline with specific milestones:
+   Month 1-3: [specific actions]
+   Month 4-6: [specific actions]
+   Month 7-12: [specific actions]
+
+4. GRANT OPPORTUNITIES — Specific grants with:
+   - Name, URL, deadline, amount, eligibility requirements
+   - Focus on AI/tech grants, SBIR/STTR if applicable
+
+5. INVESTOR TARGET LIST — Types of investors for ${input.industry} ${input.businessModel}:
+   - Angel investors: where to find them (specific platforms)
+   - VCs: what stage, what they look for
+   - Accelerators: specific programs with application URLs and deadlines
+
+6. FINANCIAL PROJECTIONS — 12-month P&L projection with assumptions.
+
+Goals: ${input.goals}
+Budget: ${input.budgetRange ?? "Not specified"}
+
+Include actual numbers, actual URLs, actual email text. No generic advice.`,
           sortOrder: 3,
         },
         {
           agentId: "execai-coach",
           label: `Executive Coaching: ${input.businessName}`,
-          description: `Create a personalized 90-day action plan for the founder of ${input.businessName}. Industry: ${input.industry}. Business model: ${input.businessModel}. Target market: ${input.targetMarket}. Goals: ${input.goals}. Timeline: ${input.timeline ?? "90 days"}`,
+          description: `You are producing a SPECIFIC, DAY-BY-DAY action plan for the founder of "${input.businessName}" — a ${input.businessModel} in ${input.industry} targeting ${input.targetMarket}.
+
+PRODUCE THESE EXACT DELIVERABLES:
+1. 30-DAY CALENDAR — Specific tasks for EACH DAY:
+   Day 1: [exact task with time estimate, e.g., "Register LLC on Delaware Division of Corporations website (45 min)"]
+   Day 2: [exact task]
+   Day 3: [exact task]
+   ... through Day 30
+
+2. WEEKLY MILESTONES — What must be DONE (not started) by end of each week:
+   Week 1: Entity formed, bank account opened, domain registered
+   Week 2: MVP wireframes complete, first 10 prospects identified
+   Week 3: Landing page live, outreach to first 20 prospects
+   Week 4: First pilot customer signed, payment processing live
+
+3. DECISION FRAMEWORK — For the top 3 decisions they face RIGHT NOW:
+   Decision 1: [specific to their situation]
+   - Option A: [pros, cons, recommendation]
+   - Option B: [pros, cons, recommendation]
+   - Recommended: [with reasoning]
+
+4. ACCOUNTABILITY METRICS — Exact KPIs to track weekly:
+   - [Metric]: [Target] by [Date]
+   - [Metric]: [Target] by [Date]
+
+5. FOUNDER ENERGY MANAGEMENT — Specific daily routine:
+   - Morning: [exact routine]
+   - Work blocks: [specific time allocation]
+   - Evening: [wind-down routine]
+
+6. RISK REGISTER — Top 5 risks with mitigation:
+   Risk 1: [specific risk] → Mitigation: [specific action]
+
+Goals: ${input.goals}
+Timeline: ${input.timeline ?? "90 days"}
+
+Be EXTREMELY specific. Actual dates, actual tasks, actual time estimates. No generic advice.`,
           sortOrder: 4,
         },
         {
           agentId: "growth-agent",
           label: `Growth & Marketing: ${input.businessName}`,
-          description: `Develop go-to-market strategy and growth plan for ${input.businessName}. Target market: ${input.targetMarket}. Industry: ${input.industry}. Business model: ${input.businessModel}. Budget: ${input.budgetRange ?? "lean/bootstrap"}. Goals: ${input.goals}`,
+          description: `You are producing SPECIFIC, READY-TO-USE marketing deliverables for "${input.businessName}" — a ${input.businessModel} in ${input.industry} targeting ${input.targetMarket}.
+
+PRODUCE THESE EXACT DELIVERABLES:
+1. LANDING PAGE COPY — Complete, ready-to-paste landing page:
+   - Hero headline and subheadline
+   - 3 benefit sections with headlines and body copy
+   - Social proof section
+   - CTA button text and surrounding copy
+   - FAQ section (5 questions)
+
+2. SOCIAL MEDIA CONTENT — 10 ready-to-post pieces:
+   Post 1: [Platform] — "[exact post text]"
+   Post 2: [Platform] — "[exact post text]"
+   ... through Post 10
+   Include mix of LinkedIn, Twitter/X, and relevant platforms for ${input.targetMarket}.
+
+3. EMAIL SEQUENCES — 5-email welcome/nurture sequence:
+   Email 1 (Day 0): Subject: "[subject]" — Body: "[full email text]"
+   Email 2 (Day 2): Subject: "[subject]" — Body: "[full email text]"
+   ... through Email 5
+
+4. CONTENT CALENDAR — 4-week content plan:
+   Week 1: [specific topics, formats, platforms, posting times]
+   Week 2: [specific topics, formats, platforms, posting times]
+   Week 3: [specific topics, formats, platforms, posting times]
+   Week 4: [specific topics, formats, platforms, posting times]
+
+5. GROWTH CHANNELS RANKED — Top 5 channels for ${input.targetMarket}:
+   Channel 1: [name] — Expected CAC: $X — Expected conversion: X% — Setup steps: [1, 2, 3]
+
+6. LAUNCH ANNOUNCEMENT — Ready-to-send press release / Product Hunt launch text.
+
+7. SEO KEYWORDS — 20 target keywords with search volume estimates and content ideas.
+
+Goals: ${input.goals}
+Budget: ${input.budgetRange ?? "lean/bootstrap"}
+
+Write ACTUAL copy, ACTUAL posts, ACTUAL emails. No placeholders or generic advice.`,
           sortOrder: 5,
         },
       ];
