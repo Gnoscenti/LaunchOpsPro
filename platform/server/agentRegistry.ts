@@ -994,6 +994,170 @@ registerAgent({
     "You are a paralegal bot specializing in business formation and compliance. Generate checklists, draft documents, track filing deadlines, and provide state-specific registration guidance. Include EIN application steps and industry-specific license requirements.",
 });
 
+
+// ─── New Pipeline Agents (Legal, Brand, Product, Financial, Hiring, Operations) ───
+registerAgent({
+  id: "legal-compliance",
+  name: "Legal & Compliance Agent",
+  version: "1.0.0",
+  description:
+    "Generates Terms of Service, Privacy Policy, DMCA policy, contractor agreements, NDA templates, and compliance documentation.",
+  capabilities: ["legal", "document-generation"],
+  executionMode: "llm",
+  modelPreference: "fast",
+  outputFormat: "json_schema",
+  persistArtifact: true,
+  artifactType: "document",
+  category: "legal",
+  icon: "Scale",
+  estimatedDuration: 30,
+  tags: ["legal", "compliance", "tos", "privacy-policy", "nda", "contracts"],
+  requiredContext: ["business_name", "industry", "business_model"],
+  requiredSecrets: [],
+  metadata: { source: "launchops-founder-edition" },
+  outputSchema: {
+    description: "Legal documents including ToS, Privacy Policy, NDA, and contractor agreements",
+    chainableFields: ["terms_of_service", "privacy_policy", "nda_template", "contractor_agreement"],
+  },
+  systemPrompt:
+    "You are a legal compliance agent specializing in startup legal documentation. Generate complete, ready-to-use legal documents including Terms of Service, Privacy Policy, DMCA policy, contractor agreements, and NDA templates. All documents should be specific to the business described and include proper legal language.",
+});
+
+registerAgent({
+  id: "brand-identity",
+  name: "Brand Identity Agent",
+  version: "1.0.0",
+  description:
+    "Generates brand voice guide, color palette recommendations, logo creative brief, tagline options, and brand positioning statement.",
+  capabilities: ["branding", "creative"],
+  executionMode: "llm",
+  modelPreference: "fast",
+  outputFormat: "json_schema",
+  persistArtifact: true,
+  artifactType: "document",
+  category: "creative",
+  icon: "Palette",
+  estimatedDuration: 25,
+  tags: ["brand", "identity", "voice", "colors", "logo", "tagline", "positioning"],
+  requiredContext: ["business_name", "industry", "target_market"],
+  requiredSecrets: [],
+  metadata: { source: "launchops-founder-edition" },
+  outputSchema: {
+    description: "Brand identity package with voice guide, colors, logo brief, taglines, and positioning",
+    chainableFields: ["brand_voice", "color_palette", "logo_brief", "taglines", "positioning_statement"],
+  },
+  systemPrompt:
+    "You are a brand identity strategist. Generate comprehensive brand identity packages including brand voice guides, color palette recommendations with hex codes, logo creative briefs, tagline options, and brand positioning statements. Be specific and creative, tailored to the business and its target market.",
+});
+
+registerAgent({
+  id: "product-mvp",
+  name: "Product & MVP Agent",
+  version: "1.0.0",
+  description:
+    "Generates feature specifications, user stories, MVP scope definition, wireframe descriptions, and technical requirements.",
+  capabilities: ["product", "engineering"],
+  executionMode: "llm",
+  modelPreference: "fast",
+  outputFormat: "json_schema",
+  persistArtifact: true,
+  artifactType: "document",
+  category: "engineering",
+  icon: "Layers",
+  estimatedDuration: 30,
+  tags: ["product", "mvp", "features", "user-stories", "wireframes", "requirements"],
+  requiredContext: ["business_name", "industry", "business_model", "goals"],
+  requiredSecrets: [],
+  metadata: { source: "launchops-founder-edition" },
+  outputSchema: {
+    description: "Product specification with features, user stories, MVP scope, wireframes, and tech requirements",
+    chainableFields: ["feature_spec", "user_stories", "mvp_scope", "wireframes", "tech_requirements"],
+  },
+  systemPrompt:
+    "You are a product manager and technical architect. Generate detailed product specifications including feature lists with priority levels, user stories in proper format, MVP scope definitions with in/out decisions, wireframe descriptions, and technical requirements documents. Be specific about what to build first and why.",
+});
+
+registerAgent({
+  id: "financial-modeling",
+  name: "Financial Modeling Agent",
+  version: "1.0.0",
+  description:
+    "Generates P&L projections (12-month), unit economics, burn rate analysis, break-even analysis, and pricing sensitivity models.",
+  capabilities: ["finance", "analytics"],
+  executionMode: "llm",
+  modelPreference: "fast",
+  outputFormat: "json_schema",
+  persistArtifact: true,
+  artifactType: "document",
+  category: "finance",
+  icon: "Calculator",
+  estimatedDuration: 30,
+  tags: ["finance", "p&l", "unit-economics", "burn-rate", "break-even", "pricing"],
+  requiredContext: ["business_name", "industry", "business_model", "budget_range"],
+  requiredSecrets: [],
+  metadata: { source: "launchops-founder-edition" },
+  outputSchema: {
+    description: "Financial models including P&L, unit economics, burn rate, break-even, and pricing sensitivity",
+    chainableFields: ["pl_projection", "unit_economics", "burn_rate", "break_even", "pricing_sensitivity"],
+  },
+  systemPrompt:
+    "You are a financial analyst specializing in startup financial modeling. Generate detailed 12-month P&L projections, unit economics calculations, burn rate analysis, break-even analysis, and pricing sensitivity models. Use realistic assumptions based on the industry and business model. Include actual numbers, formulas, and scenarios.",
+});
+
+registerAgent({
+  id: "hiring-team",
+  name: "Hiring & Team Agent",
+  version: "1.0.0",
+  description:
+    "Generates org charts, job descriptions for key roles, contractor briefs, interview questions, and compensation benchmarks.",
+  capabilities: ["hr", "recruiting"],
+  executionMode: "llm",
+  modelPreference: "fast",
+  outputFormat: "json_schema",
+  persistArtifact: true,
+  artifactType: "document",
+  category: "operations",
+  icon: "Users",
+  estimatedDuration: 25,
+  tags: ["hiring", "team", "org-chart", "job-descriptions", "interviews", "compensation"],
+  requiredContext: ["business_name", "industry", "budget_range"],
+  requiredSecrets: [],
+  metadata: { source: "launchops-founder-edition" },
+  outputSchema: {
+    description: "Hiring package with org chart, job descriptions, contractor briefs, interview questions, and comp benchmarks",
+    chainableFields: ["org_chart", "job_descriptions", "contractor_briefs", "interview_questions", "compensation"],
+  },
+  systemPrompt:
+    "You are an HR strategist and recruiting expert. Generate comprehensive hiring packages including org charts with reporting structure, detailed job descriptions for key roles, contractor briefs, behavioral interview questions, and compensation benchmarks based on market data. Be specific about roles, responsibilities, and salary ranges.",
+});
+
+registerAgent({
+  id: "operations-sops",
+  name: "Operations & SOPs Agent",
+  version: "1.0.0",
+  description:
+    "Generates standard operating procedures, workflow diagrams, daily/weekly checklists, and tool stack integration plans.",
+  capabilities: ["operations", "automation"],
+  executionMode: "llm",
+  modelPreference: "fast",
+  outputFormat: "json_schema",
+  persistArtifact: true,
+  artifactType: "document",
+  category: "operations",
+  icon: "ClipboardList",
+  estimatedDuration: 25,
+  tags: ["operations", "sops", "workflows", "checklists", "integration", "processes"],
+  requiredContext: ["business_name", "industry", "business_model"],
+  requiredSecrets: [],
+  metadata: { source: "launchops-founder-edition" },
+  outputSchema: {
+    description: "Operations package with SOPs, workflow diagrams, checklists, and tool integration plans",
+    chainableFields: ["sops", "workflow_diagrams", "checklists", "tool_integration_plan"],
+  },
+  systemPrompt:
+    "You are an operations expert specializing in startup process design. Generate detailed standard operating procedures, text-based workflow diagrams, daily and weekly checklists, and tool stack integration plans. Be specific about steps, responsible parties, timelines, and automation opportunities.",
+});
+
 // ─── Registry Stats ─────────────────────────────────────────────────────────────────
 
 export function getRegistryStats() {

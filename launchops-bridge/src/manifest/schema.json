@@ -1,0 +1,209 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LaunchOps Action Manifest",
+  "description": "Standardized format for packaging LaunchOpsPro pipeline outputs into executable action manifests for Founder Edition agents.",
+  "version": "1.0.0",
+  "type": "object",
+  "properties": {
+    "manifest_id": {
+      "type": "string",
+      "description": "Unique identifier for this manifest (UUID v4)"
+    },
+    "version": {
+      "type": "string",
+      "description": "Schema version (semver)",
+      "default": "1.0.0"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of manifest creation"
+    },
+    "source": {
+      "type": "object",
+      "description": "Origin system metadata",
+      "properties": {
+        "system": {
+          "type": "string",
+          "enum": ["launchops-pro"],
+          "description": "Source system identifier"
+        },
+        "execution_id": {
+          "type": "string",
+          "description": "LaunchOpsPro execution ID that generated this manifest"
+        },
+        "workflow_id": {
+          "type": "string",
+          "description": "LaunchOpsPro workflow ID"
+        },
+        "workflow_name": {
+          "type": "string",
+          "description": "Human-readable workflow name"
+        }
+      },
+      "required": ["system", "execution_id"]
+    },
+    "business_context": {
+      "type": "object",
+      "description": "Business context accumulated from the pipeline",
+      "properties": {
+        "business_name": { "type": "string" },
+        "business_type": { "type": "string", "enum": ["saas", "ecommerce", "agency", "marketplace", "other"] },
+        "industry": { "type": "string" },
+        "goal": { "type": "string" },
+        "constraints": { "type": "object" },
+        "accumulated_context": {
+          "type": "object",
+          "description": "Full context chain from LaunchOpsPro execution (chainable fields from all completed steps)"
+        }
+      },
+      "required": ["business_name", "business_type", "goal"]
+    },
+    "actions": {
+      "type": "array",
+      "description": "Ordered list of actions for Founder Edition to execute",
+      "items": {
+        "$ref": "#/definitions/Action"
+      }
+    },
+    "execution_config": {
+      "type": "object",
+      "description": "Global execution configuration",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["sequential", "parallel", "dependency-graph"],
+          "default": "sequential",
+          "description": "How actions should be executed"
+        },
+        "halt_on_failure": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to stop execution if an action fails"
+        },
+        "callback_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL to POST execution results back to LaunchOpsPro"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "default": 3600,
+          "description": "Maximum total execution time"
+        },
+        "dry_run": {
+          "type": "boolean",
+          "default": false,
+          "description": "If true, validate actions without executing"
+        }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata for tracking and auditing",
+      "properties": {
+        "user_id": { "type": "string" },
+        "proof_hashes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "ProofGuard attestation hashes from LaunchOpsPro"
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    }
+  },
+  "required": ["manifest_id", "version", "created_at", "source", "business_context", "actions"],
+  "definitions": {
+    "Action": {
+      "type": "object",
+      "description": "A single executable action for a Founder Edition agent",
+      "properties": {
+        "action_id": {
+          "type": "string",
+          "description": "Unique action identifier within this manifest"
+        },
+        "sort_order": {
+          "type": "integer",
+          "description": "Execution order (0-indexed)"
+        },
+        "agent_id": {
+          "type": "string",
+          "description": "Target Founder Edition agent ID (must match AGENT_MAP keys)"
+        },
+        "method": {
+          "type": "string",
+          "description": "Specific method to invoke on method-dispatch agents (optional)"
+        },
+        "label": {
+          "type": "string",
+          "description": "Human-readable label for this action"
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of what this action should accomplish"
+        },
+        "execution_mode": {
+          "type": "string",
+          "enum": ["python", "llm", "hybrid"],
+          "description": "Preferred execution mode"
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["critical", "high", "medium", "low"],
+          "default": "medium"
+        },
+        "config": {
+          "type": "object",
+          "description": "Agent-specific configuration parameters",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Task type for the agent's execute() method"
+            },
+            "_method": {
+              "type": "string",
+              "description": "Method dispatch key for Founder Edition agents"
+            }
+          },
+          "additionalProperties": true
+        },
+        "context": {
+          "type": "object",
+          "description": "Context data from prior pipeline steps relevant to this action",
+          "additionalProperties": true
+        },
+        "inputs": {
+          "type": "object",
+          "description": "Structured inputs for the agent",
+          "additionalProperties": true
+        },
+        "expected_outputs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Expected output field names for validation"
+        },
+        "dependencies": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "action_ids that must complete before this action runs"
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "default": 300,
+          "description": "Per-action timeout"
+        },
+        "retry_policy": {
+          "type": "object",
+          "properties": {
+            "max_retries": { "type": "integer", "default": 2 },
+            "backoff_seconds": { "type": "integer", "default": 5 }
+          }
+        }
+      },
+      "required": ["action_id", "agent_id", "label"]
+    }
+  }
+}

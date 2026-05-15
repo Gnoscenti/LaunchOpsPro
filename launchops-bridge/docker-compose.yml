@@ -1,0 +1,32 @@
+version: "3.8"
+
+services:
+  bridge:
+    build: .
+    container_name: launchops-bridge
+    ports:
+      - "8002:8002"
+    environment:
+      - BRIDGE_PORT=8002
+      - FOUNDER_EDITION_DIR=/opt/founder-edition
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - LAUNCHOPS_PRO_URL=http://host.docker.internal:3000
+    volumes:
+      - ./src:/app/src
+      - founder-edition:/opt/founder-edition:ro
+    restart: unless-stopped
+    networks:
+      - launchops-net
+
+volumes:
+  founder-edition:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /opt/launchops/launchops-founder-edition
+
+networks:
+  launchops-net:
+    external: true
+    name: launchops_default

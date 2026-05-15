@@ -1180,6 +1180,385 @@ Budget: ${input.budgetRange ?? "lean/bootstrap"}
 Write ACTUAL copy, ACTUAL posts, ACTUAL emails. No placeholders or generic advice.`,
           sortOrder: 5,
         },
+        {
+          agentId: "legal-compliance",
+          label: `Legal & Compliance: ${input.businessName}`,
+          description: `You are producing SPECIFIC, READY-TO-USE legal documents for "${input.businessName}" — a ${input.businessModel} in ${input.industry} targeting ${input.targetMarket}.
+PRODUCE THESE EXACT DELIVERABLES:
+1. TERMS OF SERVICE — Complete, ready-to-publish Terms of Service document with:
+   - Service description specific to ${input.businessName}
+   - User obligations and acceptable use policy
+   - Payment terms (if applicable for ${input.businessModel})
+   - Intellectual property rights
+   - Limitation of liability
+   - Termination clauses
+   - Governing law (recommend jurisdiction)
+   Format as a complete legal document with numbered sections.
+
+2. PRIVACY POLICY — Complete Privacy Policy compliant with GDPR, CCPA, and applicable laws:
+   - Data collection practices specific to a ${input.businessModel} platform
+   - How data is used, stored, and shared
+   - User rights (access, deletion, portability)
+   - Cookie policy
+   - Third-party services used
+   - Contact information for privacy inquiries
+
+3. NDA TEMPLATE — Mutual Non-Disclosure Agreement:
+   - Parties section with blanks for names
+   - Definition of Confidential Information
+   - Obligations of receiving party
+   - Exclusions from confidentiality
+   - Term (recommend 2 years)
+   - Remedies for breach
+
+4. CONTRACTOR AGREEMENT — Independent Contractor Agreement template:
+   - Scope of work section
+   - Compensation and payment terms
+   - IP assignment clause (work-for-hire)
+   - Confidentiality obligations
+   - Termination provisions
+   - Independent contractor status affirmation
+
+5. DMCA POLICY — Digital Millennium Copyright Act notice and takedown policy:
+   - Designated agent information
+   - How to file a complaint
+   - Counter-notification process
+   - Repeat infringer policy
+
+6. COMPLIANCE CHECKLIST — Specific regulatory requirements for ${input.industry}:
+   - Federal requirements
+   - State requirements (recommend based on business type)
+   - Industry-specific regulations
+   - Timeline for compliance milestones
+
+All documents should use proper legal formatting with numbered sections and subsections. Include [BRACKETED PLACEHOLDERS] where business-specific details need to be filled in.
+Goals: ${input.goals}`,
+          sortOrder: 6,
+        },
+        {
+          agentId: "brand-identity",
+          label: `Brand Identity: ${input.businessName}`,
+          description: `You are producing a COMPLETE BRAND IDENTITY PACKAGE for "${input.businessName}" — a ${input.businessModel} in ${input.industry} targeting ${input.targetMarket}.
+PRODUCE THESE EXACT DELIVERABLES:
+1. BRAND POSITIONING STATEMENT — Fill in this framework:
+   "For [target audience], ${input.businessName} is the [category] that [key benefit] because [reason to believe]."
+   Provide 3 variations with different angles.
+
+2. BRAND VOICE GUIDE — Complete voice and tone document:
+   - Brand personality (3-5 adjectives with definitions)
+   - Voice characteristics: We are [X], We are not [Y]
+   - Tone variations by context:
+     * Marketing copy: [example sentences]
+     * Customer support: [example sentences]
+     * Social media: [example sentences]
+     * Technical docs: [example sentences]
+   - Words we use vs. words we avoid (table with 10+ examples)
+   - Sample paragraphs in brand voice (3 different contexts)
+
+3. COLOR PALETTE — Complete color system with exact values:
+   - Primary color: Name, Hex, RGB, use case
+   - Secondary color: Name, Hex, RGB, use case
+   - Accent color: Name, Hex, RGB, use case
+   - Neutral palette: 5 shades from dark to light with hex codes
+   - Semantic colors: Success, Warning, Error, Info with hex codes
+   - Background colors: Light mode and dark mode recommendations
+   - Color psychology explanation for why these colors work for ${input.targetMarket}
+   Format as a table with all values.
+
+4. LOGO CREATIVE BRIEF — Detailed brief for a designer:
+   - Concept direction (3 options with mood descriptions)
+   - Style: modern/classic/playful/minimal/bold
+   - Must-include elements
+   - Must-avoid elements
+   - Inspiration references (describe 3 logos to reference)
+   - Size requirements (favicon, social, full)
+   - Color usage in logo (primary only vs. multi-color)
+
+5. TAGLINE OPTIONS — 10 tagline candidates:
+   Each with: Tagline | Type (aspirational/descriptive/action) | Best used for (ads/hero/email subject)
+   Format as a table.
+
+6. BRAND STORY — 200-word origin story narrative:
+   - The problem that inspired ${input.businessName}
+   - The "aha moment"
+   - The mission going forward
+   - Written in brand voice
+
+7. SOCIAL MEDIA BIO TEMPLATES — Ready-to-paste bios:
+   - Twitter/X (160 chars)
+   - LinkedIn (2000 chars)
+   - Instagram (150 chars)
+   - TikTok (80 chars)
+Target market: ${input.targetMarket}
+Goals: ${input.goals}
+Be creative, specific, and opinionated. No generic advice.`,
+          sortOrder: 7,
+        },
+        {
+          agentId: "product-mvp",
+          label: `Product & MVP: ${input.businessName}`,
+          description: `You are producing a COMPLETE PRODUCT SPECIFICATION for "${input.businessName}" — a ${input.businessModel} in ${input.industry} targeting ${input.targetMarket}.
+PRODUCE THESE EXACT DELIVERABLES:
+1. MVP SCOPE DEFINITION — Clear in/out table:
+   | Feature | In MVP? | Priority (P0/P1/P2) | Effort (S/M/L) | Justification |
+   Include at least 15 features with clear YES/NO decisions.
+   P0 = must have for launch, P1 = needed within 30 days, P2 = nice to have
+
+2. USER STORIES — Complete user stories in proper format:
+   Epic 1: [Name]
+   - As a [user type], I want to [action] so that [benefit]
+     Acceptance criteria:
+     - [ ] [specific testable criterion]
+     - [ ] [specific testable criterion]
+   Include at least 10 user stories across 3-4 epics.
+
+3. FEATURE SPECIFICATION — For the top 3 MVP features:
+   Feature: [Name]
+   - User flow: Step 1 → Step 2 → Step 3 (with exact screens)
+   - Data model: What fields/entities are needed
+   - API endpoints: GET/POST/PUT/DELETE with paths and payloads
+   - Edge cases: What could go wrong and how to handle it
+   - Success metrics: How to measure if this feature works
+
+4. WIREFRAME DESCRIPTIONS — Text-based wireframes for 5 key screens:
+   Screen: [Name]
+   ┌─────────────────────────────┐
+   │ [Header/Nav description]     │
+   │                              │
+   │ [Main content area]          │
+   │ [Describe each element]      │
+   │                              │
+   │ [Footer/CTA]                 │
+   └─────────────────────────────┘
+   Elements: [list each interactive element]
+
+5. TECHNICAL REQUIREMENTS — Architecture decisions:
+   - Frontend: [specific framework] — why
+   - Backend: [specific framework] — why
+   - Database: [specific DB] — why
+   - Hosting: [specific provider] — why
+   - Auth: [specific solution] — why
+   - Payments: [specific integration] — why
+   - Estimated build time: [weeks] with [team size]
+
+6. LAUNCH CHECKLIST — Exact steps to go from code to live:
+   - [ ] Step 1: [specific action with time estimate]
+   - [ ] Step 2: [specific action with time estimate]
+   ... through launch day
+
+Goals: ${input.goals}
+Budget: ${input.budgetRange ?? "lean/bootstrap"}
+Timeline: ${input.timeline ?? "90 days"}
+Be EXTREMELY specific. Actual features, actual user flows, actual technical decisions.`,
+          sortOrder: 8,
+        },
+        {
+          agentId: "financial-modeling",
+          label: `Financial Modeling: ${input.businessName}`,
+          description: `You are producing DETAILED FINANCIAL MODELS for "${input.businessName}" — a ${input.businessModel} in ${input.industry} targeting ${input.targetMarket}.
+PRODUCE THESE EXACT DELIVERABLES:
+1. 12-MONTH P&L PROJECTION — Complete profit & loss statement:
+   | Month | Revenue | COGS | Gross Profit | OpEx | Marketing | Payroll | Net Income |
+   |-------|---------|------|--------------|------|-----------|---------|------------|
+   | M1    | $X      | $X   | $X           | $X   | $X        | $X      | $X         |
+   ... through Month 12
+   Include assumptions below the table:
+   - Revenue growth rate: X% MoM (justify based on ${input.industry} benchmarks)
+   - Customer acquisition: X new customers/month at $X CAC
+   - Pricing: $X/month based on ${input.businessModel} model
+   - Churn: X% monthly (industry benchmark for ${input.industry})
+
+2. UNIT ECONOMICS — Per-customer breakdown:
+   - Customer Acquisition Cost (CAC): $X
+     * Breakdown: Ads $X + Content $X + Sales $X
+   - Lifetime Value (LTV): $X
+     * Calculation: ARPU ($X) × Gross Margin (X%) × Avg Lifetime (X months)
+   - LTV:CAC Ratio: X:1 (target: 3:1+)
+   - Payback Period: X months
+   - Gross Margin: X%
+   - Contribution Margin: X%
+
+3. BURN RATE ANALYSIS:
+   - Monthly burn rate: $X/month
+   - Runway with current budget (${input.budgetRange ?? "$50K assumed"}): X months
+   - Burn rate breakdown:
+     * Fixed costs: $X (list each)
+     * Variable costs: $X (list each)
+     * One-time costs: $X (list each)
+   - Path to profitability: Month X at Y customers
+
+4. BREAK-EVEN ANALYSIS:
+   - Break-even point: X customers / $X MRR
+   - Fixed costs per month: $X
+   - Variable cost per customer: $X
+   - Revenue per customer: $X
+   - Contribution margin per customer: $X
+   - Break-even formula: Fixed Costs / Contribution Margin = X customers
+   - Expected break-even date: Month X
+
+5. PRICING SENSITIVITY MODEL — 3 scenarios:
+   | Scenario | Price Point | Expected Customers | MRR | Break-even |
+   | Conservative | $X | X | $X | Month X |
+   | Base Case | $X | X | $X | Month X |
+   | Aggressive | $X | X | $X | Month X |
+   Recommendation with reasoning.
+
+6. FUNDING REQUIREMENTS:
+   - Total capital needed to reach profitability: $X
+   - Use of funds breakdown (pie chart as text):
+     * Product development: X% ($X)
+     * Marketing: X% ($X)
+     * Operations: X% ($X)
+     * Reserve: X% ($X)
+   - Recommended funding strategy based on ${input.budgetRange ?? "bootstrap"} budget
+
+Goals: ${input.goals}
+Budget: ${input.budgetRange ?? "Not specified — assume $50K bootstrap"}
+Use REAL numbers based on ${input.industry} benchmarks. Show your math.`,
+          sortOrder: 9,
+        },
+        {
+          agentId: "hiring-team",
+          label: `Hiring & Team: ${input.businessName}`,
+          description: `You are producing a COMPLETE HIRING AND TEAM BUILDING PACKAGE for "${input.businessName}" — a ${input.businessModel} in ${input.industry} targeting ${input.targetMarket}.
+PRODUCE THESE EXACT DELIVERABLES:
+1. ORG CHART — Text-based organizational structure:
+   Phase 1 (Months 1-3, Solo/Co-founder):
+   └── Founder/CEO
+       ├── [Role 1] — contractor or hire?
+       └── [Role 2] — contractor or hire?
+   
+   Phase 2 (Months 4-6, First hires):
+   └── CEO
+       ├── [Role] — FT/PT/Contract
+       ├── [Role] — FT/PT/Contract
+       └── [Role] — FT/PT/Contract
+   
+   Phase 3 (Months 7-12, Growth):
+   └── CEO
+       ├── VP Engineering
+       │   ├── [Role]
+       │   └── [Role]
+       └── VP Growth
+           ├── [Role]
+           └── [Role]
+   
+   Include timing, priority, and cost for each role.
+
+2. JOB DESCRIPTIONS — Complete JDs for first 3 hires:
+   For each role:
+   - Title
+   - Type: Full-time / Part-time / Contract
+   - Location: Remote / Hybrid / On-site
+   - Compensation range: $X-$Y + equity X-Y%
+   - About the role (2 paragraphs)
+   - Responsibilities (8-10 bullet points)
+   - Requirements (must-have vs. nice-to-have)
+   - What success looks like at 30/60/90 days
+   - How to apply
+
+3. CONTRACTOR BRIEFS — For 3 immediate contractor needs:
+   - Role/deliverable
+   - Scope of work (specific deliverables with deadlines)
+   - Budget: $X for Y hours/deliverables
+   - Where to find them (specific platforms: Toptal, Upwork, etc.)
+   - Evaluation criteria
+   - Sample project brief to post
+
+4. INTERVIEW QUESTIONS — Structured interview for each role:
+   Round 1 (Screen, 30 min):
+   - Q1: [question] — What good looks like: [answer]
+   - Q2: [question] — What good looks like: [answer]
+   Round 2 (Technical/Skills, 60 min):
+   - Q1: [question or exercise] — Evaluation criteria: [rubric]
+   Round 3 (Culture/Values, 45 min):
+   - Q1: [question] — Red flags: [what to watch for]
+
+5. COMPENSATION BENCHMARKS — Market data table:
+   | Role | Junior | Mid | Senior | Equity Range | Source |
+   Based on ${input.industry} in 2024-2025 market. Include remote vs. on-site differential.
+
+6. HIRING TIMELINE:
+   - Month 1: [who to hire/contract and why]
+   - Month 2: [who to hire/contract and why]
+   - Month 3: [who to hire/contract and why]
+   ... through Month 12
+   Total Year 1 people cost: $X
+
+Goals: ${input.goals}
+Budget: ${input.budgetRange ?? "lean/bootstrap"}
+Be SPECIFIC about roles, compensation, and timing for a ${input.businessModel} in ${input.industry}.`,
+          sortOrder: 10,
+        },
+        {
+          agentId: "operations-sops",
+          label: `Operations & SOPs: ${input.businessName}`,
+          description: `You are producing a COMPLETE OPERATIONS MANUAL for "${input.businessName}" — a ${input.businessModel} in ${input.industry} targeting ${input.targetMarket}.
+PRODUCE THESE EXACT DELIVERABLES:
+1. STANDARD OPERATING PROCEDURES — 5 core SOPs:
+   SOP 1: Customer Onboarding
+   - Trigger: [what initiates this process]
+   - Steps:
+     1. [Specific action] — Owner: [role] — Tool: [specific tool] — Time: X min
+     2. [Specific action] — Owner: [role] — Tool: [specific tool] — Time: X min
+     ... (8-12 steps)
+   - Completion criteria: [how to know it's done]
+   - Escalation: [when and to whom]
+   
+   SOP 2: Content Publishing
+   SOP 3: Customer Support Ticket Resolution
+   SOP 4: Weekly Metrics Review
+   SOP 5: New Feature Deployment
+   Each with full step-by-step detail.
+
+2. WORKFLOW DIAGRAMS — Text-based process flows:
+   Sales Pipeline:
+   Lead → Qualified → Demo Scheduled → Demo Done → Proposal Sent → Negotiation → Closed Won/Lost
+   [For each stage: criteria to advance, owner, tools, SLA]
+   
+   Support Escalation:
+   Ticket → Triage → L1 Resolution → L2 Escalation → Resolution → Follow-up
+   [For each stage: criteria, owner, SLA]
+   
+   Content Pipeline:
+   Idea → Brief → Draft → Review → Edit → Publish → Promote → Measure
+   [For each stage: criteria, owner, tools, timeline]
+
+3. DAILY CHECKLIST — Founder's daily operating rhythm:
+   □ 8:00 AM — [specific task with tool]
+   □ 8:30 AM — [specific task with tool]
+   □ 9:00 AM — [specific task with tool]
+   ... through end of day
+   Include specific metrics to check, tools to open, and decisions to make.
+
+4. WEEKLY CHECKLIST — End-of-week review:
+   □ [Task] — Metric to check: [specific KPI] — Tool: [where to find it]
+   □ [Task] — Deliverable: [what should be done]
+   ... (15-20 items)
+
+5. TOOL STACK INTEGRATION PLAN:
+   | Tool | Purpose | Monthly Cost | Integrates With | Setup Priority |
+   Include 10-15 tools specific to a ${input.businessModel} in ${input.industry}.
+   For each integration:
+   - How to connect (Zapier, native, API, manual)
+   - Data flow: [Tool A] → [what data] → [Tool B]
+   - Automation opportunity: [what can be automated]
+
+6. METRICS DASHBOARD SPEC — What to track:
+   Daily metrics: [list with targets]
+   Weekly metrics: [list with targets]
+   Monthly metrics: [list with targets]
+   Recommended dashboard tool and exact setup steps.
+
+7. AUTOMATION OPPORTUNITIES — 10 processes to automate:
+   | Process | Current State | Automated State | Tool | Setup Time | Monthly Time Saved |
+   Prioritized by impact.
+
+Goals: ${input.goals}
+Timeline: ${input.timeline ?? "90 days"}
+Be EXTREMELY specific. Actual tools, actual steps, actual time estimates for a ${input.businessModel}.`,
+          sortOrder: 11,
+        },
       ];
 
       const workflow = await db.createWorkflow({

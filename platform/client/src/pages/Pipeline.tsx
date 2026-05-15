@@ -50,6 +50,12 @@ import {
   Check,
   Download,
   Wand2,
+  Scale,
+  Palette,
+  Layers,
+  Calculator,
+  Users,
+  ClipboardList,
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -124,6 +130,48 @@ const PIPELINE_STAGES: Omit<StageStatus, "status" | "output" | "startedAt" | "co
     description: "Marketing strategy, growth channels, customer acquisition",
     icon: <BarChart3 className="w-5 h-5" />,
   },
+  {
+    id: "legal",
+    label: "Legal & Compliance",
+    agentId: "legal-compliance",
+    description: "Terms of Service, Privacy Policy, NDAs, contractor agreements",
+    icon: <Scale className="w-5 h-5" />,
+  },
+  {
+    id: "brand",
+    label: "Brand Identity",
+    agentId: "brand-identity",
+    description: "Brand voice, color palette, logo brief, taglines, positioning",
+    icon: <Palette className="w-5 h-5" />,
+  },
+  {
+    id: "product",
+    label: "Product & MVP",
+    agentId: "product-mvp",
+    description: "Feature spec, user stories, MVP scope, wireframes, tech requirements",
+    icon: <Layers className="w-5 h-5" />,
+  },
+  {
+    id: "financial",
+    label: "Financial Modeling",
+    agentId: "financial-modeling",
+    description: "P&L projections, unit economics, burn rate, break-even analysis",
+    icon: <Calculator className="w-5 h-5" />,
+  },
+  {
+    id: "hiring",
+    label: "Hiring & Team",
+    agentId: "hiring-team",
+    description: "Org chart, job descriptions, contractor briefs, compensation benchmarks",
+    icon: <Users className="w-5 h-5" />,
+  },
+  {
+    id: "operations",
+    label: "Operations & SOPs",
+    agentId: "operations-sops",
+    description: "Standard operating procedures, workflows, checklists, tool integration",
+    icon: <ClipboardList className="w-5 h-5" />,
+  },
 ];
 
 // ─── Intake Form Component ───────────────────────────────────────────────────
@@ -166,7 +214,7 @@ function IntakeForm({ onSubmit, isSubmitting }: { onSubmit: (data: IntakeFormDat
         </h1>
         <p className="text-sm text-muted-foreground max-w-md mx-auto">
           Tell us about your business and our AI agents will create a personalized
-          launch plan across 6 critical dimensions.
+          launch plan across 12 critical dimensions.
         </p>
       </div>
 
@@ -477,6 +525,36 @@ function MissionControl({
       growth: [
         { label: "Generate Landing Page Copy", icon: <Wand2 className="w-3 h-3" />, action: "landing_page" },
         { label: "Generate Social Media Posts", icon: <FileText className="w-3 h-3" />, action: "social_posts" },
+      ],
+      legal: [
+        { label: "Generate Terms of Service", icon: <FileText className="w-3 h-3" />, action: "terms_of_service" },
+        { label: "Generate Privacy Policy", icon: <FileText className="w-3 h-3" />, action: "privacy_policy" },
+        { label: "Generate NDA Template", icon: <Wand2 className="w-3 h-3" />, action: "nda_template" },
+      ],
+      brand: [
+        { label: "Generate Brand Voice Guide", icon: <Wand2 className="w-3 h-3" />, action: "brand_voice" },
+        { label: "Generate Logo Creative Brief", icon: <FileText className="w-3 h-3" />, action: "logo_brief" },
+        { label: "Generate Color Palette CSS", icon: <Wand2 className="w-3 h-3" />, action: "color_palette_css" },
+      ],
+      product: [
+        { label: "Generate Feature Spec Document", icon: <FileText className="w-3 h-3" />, action: "feature_spec" },
+        { label: "Generate User Stories", icon: <Wand2 className="w-3 h-3" />, action: "user_stories" },
+        { label: "Generate Technical Requirements", icon: <FileText className="w-3 h-3" />, action: "tech_requirements" },
+      ],
+      financial: [
+        { label: "Generate P&L Spreadsheet", icon: <Wand2 className="w-3 h-3" />, action: "pl_spreadsheet" },
+        { label: "Generate Investor Financial Summary", icon: <FileText className="w-3 h-3" />, action: "investor_summary" },
+        { label: "Generate Pricing Calculator", icon: <Wand2 className="w-3 h-3" />, action: "pricing_calculator" },
+      ],
+      hiring: [
+        { label: "Generate Job Descriptions", icon: <FileText className="w-3 h-3" />, action: "job_descriptions" },
+        { label: "Generate Interview Scorecard", icon: <Wand2 className="w-3 h-3" />, action: "interview_scorecard" },
+        { label: "Generate Contractor Brief", icon: <FileText className="w-3 h-3" />, action: "contractor_brief" },
+      ],
+      operations: [
+        { label: "Generate SOP Document", icon: <FileText className="w-3 h-3" />, action: "sop_document" },
+        { label: "Generate Daily Checklist", icon: <Wand2 className="w-3 h-3" />, action: "daily_checklist" },
+        { label: "Generate Tool Integration Plan", icon: <FileText className="w-3 h-3" />, action: "tool_integration" },
       ],
     };
     return actions[stageId] ?? [];
@@ -1065,7 +1143,7 @@ export default function Pipeline() {
             Launch Pipeline
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            AI-powered business launch across 6 critical dimensions
+            AI-powered business launch across 12 critical dimensions
           </p>
         </div>
         {view === "running" && !isComplete && (
