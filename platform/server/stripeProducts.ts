@@ -7,11 +7,19 @@
 
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2026-04-22.dahlia",
-});
+let stripeClient: Stripe | undefined;
 
-export { stripe };
+export function getStripeClient(): Stripe {
+  const apiKey = process.env.STRIPE_SECRET_KEY;
+  if (!apiKey) {
+    throw new Error("STRIPE_SECRET_KEY is required for billing operations");
+  }
+
+  stripeClient ??= new Stripe(apiKey, {
+    apiVersion: "2026-04-22.dahlia",
+  });
+  return stripeClient;
+}
 
 // ─── Tier → Stripe Mapping ─────────────────────────────────────────────
 
@@ -146,7 +154,7 @@ export async function getOrCreateStripeCustomer(user: {
     return user.stripeCustomerId;
   }
 
-  const customer = await stripe.customers.create({
+  const customer = await getStripeClient().customers.create({
     email: user.email || undefined,
     name: user.name || undefined,
     metadata: {

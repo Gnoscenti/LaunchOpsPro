@@ -11,7 +11,7 @@
  */
 
 import { Router, Request, Response } from "express";
-import { stripe, getTierIdFromPriceId, getTierIdFromProductId } from "./stripeProducts";
+import { getStripeClient, getTierIdFromPriceId, getTierIdFromProductId } from "./stripeProducts";
 import * as db from "./db";
 import type Stripe from "stripe";
 
@@ -100,6 +100,14 @@ stripeWebhookRouter.post(
     if (!sig) {
       console.error("[Stripe Webhook] Missing stripe-signature header");
       return res.status(400).json({ error: "Missing signature" });
+    }
+
+    let stripe: Stripe;
+    try {
+      stripe = getStripeClient();
+    } catch (error) {
+      console.error("[Stripe Webhook] Billing is not configured", error);
+      return res.status(503).json({ error: "Billing is not configured" });
     }
 
     let event: Stripe.Event;
