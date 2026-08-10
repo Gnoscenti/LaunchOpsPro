@@ -654,8 +654,9 @@ const subscriptionRouter = router({
       tierId: z.enum(['founder', 'governance', 'enterprise']),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { getStripePriceId, getOrCreateStripeCustomer, stripe } = await import('./stripeProducts');
+      const { getStripePriceId, getOrCreateStripeCustomer, getStripeClient } = await import('./stripeProducts');
       const priceId = getStripePriceId(input.tierId);
+      const stripe = getStripeClient();
 
       // Get or create Stripe customer
       const sub = await db.getUserSubscription(ctx.user.id);
@@ -700,7 +701,8 @@ const subscriptionRouter = router({
 
   /** Create a Stripe Customer Portal session for subscription management */
   createPortalSession: protectedProcedure.mutation(async ({ ctx }) => {
-    const { stripe } = await import('./stripeProducts');
+    const { getStripeClient } = await import('./stripeProducts');
+    const stripe = getStripeClient();
     const sub = await db.getUserSubscription(ctx.user.id);
 
     if (!sub?.stripeCustomerId) {
@@ -728,7 +730,8 @@ const subscriptionRouter = router({
     }
 
     try {
-      const { stripe } = await import('./stripeProducts');
+      const { getStripeClient } = await import('./stripeProducts');
+      const stripe = getStripeClient();
       const invoices = await stripe.invoices.list({
         customer: sub.stripeCustomerId,
         limit: 20,

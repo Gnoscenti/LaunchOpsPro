@@ -54,7 +54,7 @@ async def test_saas_deployment() -> None:
     run = orchestrator.plan_execution(spec.name, {"business_type": spec.product_type.value})
 
     assert run.tasks, "Mock deployment plan must contain at least one task"
-    assert all(task.agent_name and task.description for task in run.tasks)
+    assert all(task.metadata.get("agent_name") and task.description for task in run.tasks)
 
     task_descriptions = [task.description.lower() for task in run.tasks]
     assert any("stripe" in description or "payment" in description for description in task_descriptions)
