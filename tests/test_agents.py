@@ -133,7 +133,8 @@ class TestBaseAgentContract:
         )
 
         assert not marker.exists()
-        assert result["success"] is False
+        assert result["success"] is True
+        assert result["stdout"].strip() == "123"
 
 
 class TestConstructorWiring:
@@ -308,4 +309,3 @@ class TestExternalGateway:
 
         assert "vultropenclaw" not in source
         assert "gateway_token = \"" not in source.lower()
-
