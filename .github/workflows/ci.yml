@@ -53,15 +53,15 @@ jobs:
         working-directory: platform
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.4.1
+          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version: "20.19.0"
           cache: pnpm
           cache-dependency-path: platform/pnpm-lock.yaml
-      - name: Enable pinned pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.4.1 --activate
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm test
