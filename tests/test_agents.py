@@ -309,3 +309,33 @@ class TestExternalGateway:
 
         assert "vultropenclaw" not in source
         assert "gateway_token = \"" not in source.lower()
+
+
+class TestSystemAssembly:
+    def test_build_system_registers_the_canonical_agent_roster(self):
+        from launchops import build_system
+
+        system = build_system()
+        expected_agents = {
+            "execai_coach",
+            "funding_intelligence",
+            "paperwork_agent",
+            "business_builder",
+            "documentary_tracker",
+            "security_agent",
+            "wordpress_agent",
+            "mautic_agent",
+            "paralegal_bot",
+            "growth_agent",
+            "analytics_agent",
+            "email_agent",
+            "openclaw_agent",
+            "stripe_agent",
+            "founder_os",
+            "dynexecutiv",
+            "content_engine",
+            "metrics_agent",
+        }
+
+        assert system["agent_load_errors"] == {}
+        assert expected_agents <= set(system["agents"])
