@@ -134,7 +134,7 @@ class ContentEngineAgent:
     def __init__(self, llm_client=None, config=None):
         if llm_client:
             self.client = llm_client
-        elif OpenAI:
+        elif OpenAI and os.environ.get("OPENAI_API_KEY"):
             api_key = os.environ.get("OPENAI_API_KEY", "")
             base_url = os.environ.get("OPENAI_API_BASE", os.environ.get("OPENAI_BASE_URL", ""))
             kwargs = {"api_key": api_key} if api_key else {}
@@ -153,6 +153,14 @@ class ContentEngineAgent:
         base_url: str = "https://aiintegrationcourse.com",
     ) -> Dict[str, Any]:
         """Generate a 30-day content calendar across X, LinkedIn, YouTube."""
+
+        if not self.client:
+            return {
+                "type": "content_calendar",
+                "start_date": date.today().isoformat(),
+                "status": "skipped",
+                "reason": "No LLM client available",
+            }
 
         system_msg = """You are a content strategist for a solo founder doing build-in-public.
 Target: 1000 new YouTube subscribers/week, 100 new course subscriptions/week.
@@ -242,6 +250,14 @@ Base URL for UTMs: {base_url}"""
         cta_url: str = "https://aiintegrationcourse.com",
     ) -> Dict[str, Any]:
         """Generate a YouTube Shorts script (under 60 seconds)."""
+
+        if not self.client:
+            return {
+                "type": "youtube_short_script",
+                "topic": topic,
+                "status": "skipped",
+                "reason": "No LLM client available",
+            }
 
         system_msg = """You are a YouTube Shorts scriptwriter for a solo founder.
 Rules:
