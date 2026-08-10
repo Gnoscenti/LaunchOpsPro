@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-LaunchOps Founder Edition — CLI Entrypoint
-The AI-Powered Business Operating System for Founders. No guardrails. Pure execution.
+LaunchOpsPro — CLI Entrypoint
+The governed business operating system for founders.
 
 Usage:
   python launchops.py launch          — Run the full launch pipeline
@@ -62,6 +62,8 @@ def build_system(config_path: str = None) -> dict:
     # Initialize shared context
     context = SharedContext()
 
+    agent_load_errors = {}
+
     # Initialize agents
     agents = {
         "execai_coach": ExecAICoach(llm_client=llm, config=cfg),
@@ -91,8 +93,9 @@ def build_system(config_path: str = None) -> dict:
             mod = importlib.import_module(module_name)
             cls = getattr(mod, class_name)
             agents[agent_name] = cls(llm_client=llm, config=cfg)
-        except Exception:
-            pass
+        except Exception as exc:
+            agent_load_errors[agent_name] = str(exc)
+            print(f"  Warning: Could not load {agent_name}: {exc}")
 
     # ── Phase 2: MCPGateway + StripeAgent with self-registered capabilities ─
     mcp_gateway = None
@@ -101,6 +104,7 @@ def build_system(config_path: str = None) -> dict:
 
         mcp_gateway = MCPGateway()
     except Exception as e:
+        agent_load_errors["mcp_gateway"] = str(e)
         print(f"  Warning: MCPGateway unavailable: {e}")
 
     try:
@@ -112,6 +116,7 @@ def build_system(config_path: str = None) -> dict:
             mcp_gateway=mcp_gateway,
         )
     except Exception as e:
+        agent_load_errors["stripe_agent"] = str(e)
         print(f"  Warning: StripeAgent init failed: {e}")
 
     # Load new pipeline agents (Founder OS, DynExecutiv, Content Engine, Metrics)
@@ -132,6 +137,7 @@ def build_system(config_path: str = None) -> dict:
             cls = getattr(mod, class_name)
             agents[agent_name] = cls(llm_client=raw_openai, config=cfg)
         except Exception as e:
+            agent_load_errors[agent_name] = str(e)
             print(f"  Warning: Could not load {agent_name}: {e}")
 
     # Initialize orchestrator
@@ -167,6 +173,7 @@ def build_system(config_path: str = None) -> dict:
         "orchestrator": orchestrator,
         "pipeline": pipeline,
         "mcp_gateway": mcp_gateway,
+        "agent_load_errors": agent_load_errors,
     }
 
 

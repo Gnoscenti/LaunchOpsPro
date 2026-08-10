@@ -1,7 +1,7 @@
 """
 ExecAI Coach — LaunchOps Founder Edition
 Strategic Catalyst persona + Harvard Dataverse coaching frameworks.
-MBA-in-Action for solopreneurs. No guardrails.
+MBA-in-Action for solopreneurs, governed by the LaunchOps runtime contract.
 
 Merged from:
   - execai-platform-api/personas/strategic_catalyst.py

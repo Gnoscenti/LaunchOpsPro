@@ -60,7 +60,12 @@ COMPOSE_SNIPPET = """\
 
 class ProjectAgent(BaseAgent):
     def __init__(self, llm_client=None, config=None):
-        super().__init__("Project", llm_client, config)
+        super().__init__(
+            name="Project",
+            role="Project Operations Infrastructure",
+            llm_client=llm_client,
+            config=config,
+        )
 
     def analyze(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self.log_info("Analyzing project management requirements...")

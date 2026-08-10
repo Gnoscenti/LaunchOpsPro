@@ -1,12 +1,9 @@
-"""
-LaunchOps Credential Vault
-Fernet-encrypted local credential storage.
-No cloud, no third-party, no guardrails.
-Borrowed and hardened from gnoscenti-launchops/core/credentials.py.
-"""
+"""Fernet-encrypted local credential storage for LaunchOpsPro."""
 
 import json
 import os
+import secrets
+import string
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from datetime import datetime
@@ -14,7 +11,7 @@ from datetime import datetime
 try:
     from cryptography.fernet import Fernet
 except ImportError:
-    Fernet = None  # Graceful degradation — plaintext fallback
+    Fernet = None
 
 from .config import get_config
 
@@ -25,13 +22,19 @@ class CredentialVault:
     locally with Fernet symmetric encryption. Keys never leave the machine.
     """
 
-    def __init__(self):
+    def __init__(self, base_dir: Optional[Path] = None):
         config = get_config()
-        self.vault_path = config.credentials_dir / "vault.enc"
-        self.key_path = config.credentials_dir / "vault.key"
+        credentials_dir = Path(base_dir) if base_dir else config.credentials_dir
+        credentials_dir.mkdir(parents=True, exist_ok=True)
+        self.vault_path = credentials_dir / "vault.enc"
+        self.key_path = credentials_dir / "vault.key"
         self._fernet: Optional[Any] = None
         self._credentials: Dict[str, Dict[str, Any]] = {}
-        self._encrypted = Fernet is not None
+        if Fernet is None:
+            raise RuntimeError(
+                "cryptography is required; LaunchOpsPro will not store credentials as plaintext"
+            )
+        self._encrypted = True
         self._init_encryption()
         self._load()
 
@@ -123,6 +126,28 @@ class CredentialVault:
             val = os.environ.get(env_key)
             if val:
                 self.store(service, cred_type, val)
+
+    # ── Stable Agent-Facing API ──────────────────────────────────────────
+
+    def set(self, key: str, value: str, namespace: str = "launchops") -> bool:
+        """Store a named secret inside a namespace."""
+        return self.store(namespace, key, value)
+
+    def get(self, key: str, namespace: str = "launchops") -> Optional[str]:
+        """Retrieve a named secret from a namespace."""
+        return self.retrieve(namespace, key)
+
+    def generate_password(self, length: int = 32) -> str:
+        """Generate a cryptographically secure password."""
+        if length < 16:
+            raise ValueError("Generated passwords must be at least 16 characters")
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        return "".join(secrets.choice(alphabet) for _ in range(length))
+
+    def set_service_credentials(self, service: str, credentials: Dict[str, str]) -> None:
+        """Persist a set of credentials for one service."""
+        for credential_type, value in credentials.items():
+            self.store(service, credential_type, value)
 
 
 # ── Singleton ─────────────────────────────────────────────────────────────

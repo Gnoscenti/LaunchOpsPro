@@ -31,21 +31,20 @@ jobs:
       - name: Run maintained backend test
         run: pytest -q backend/tests/test_mock_deployment.py
 
-  legacy-agent-contracts:
+  agent-contracts:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-      - name: Install legacy-suite dependencies
+      - name: Install agent-runtime dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pytest
-      - name: Run quarantined legacy suite
+      - name: Run blocking agent contract suite
         run: pytest -q tests/test_agents.py
 
   dashboard:

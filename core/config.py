@@ -1,13 +1,14 @@
-"""
-LaunchOps Founder Edition — Configuration
-Zero guardrails. Tier 3 local execution. Full access.
-"""
+"""Typed configuration for the canonical LaunchOpsPro runtime."""
 
 import os
 import json
+import logging
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Any
+
+
+logger = logging.getLogger("launchops.config")
 
 
 LAUNCHOPS_DIR = Path.home() / ".launchops"
@@ -21,8 +22,10 @@ DOCUMENTARY_DIR = LAUNCHOPS_DIR / "documentary"
 @dataclass
 class LaunchOpsConfig:
     """
-    Master configuration for LaunchOps Founder Edition.
-    Everything runs local, everything runs unhinged.
+    Master configuration for LaunchOpsPro.
+
+    Flat fields remain the persisted schema. ``to_dict`` also exposes stable
+    ``business``, ``llm``, and ``ports`` groups consumed by the agent runtime.
     """
 
     # ── Identity ──────────────────────────────────────────────────────────
@@ -37,7 +40,7 @@ class LaunchOpsConfig:
     # ── LLM ───────────────────────────────────────────────────────────────
     llm_provider: str = "openai"         # openai, anthropic, local
     openai_api_key: str = ""
-    openai_model: str = "gpt-4o"
+    openai_model: str = "gpt-4.1-mini"
     openai_base_url: str = ""
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-20250514"
@@ -133,8 +136,8 @@ class LaunchOpsConfig:
                 for key, val in data.items():
                     if hasattr(self, key):
                         setattr(self, key, val)
-            except Exception:
-                pass
+            except (OSError, json.JSONDecodeError) as exc:
+                logger.warning("Ignoring unreadable config file %s: %s", config_path, exc)
 
     def save(self):
         """Persist current config to disk."""
@@ -149,13 +152,32 @@ class LaunchOpsConfig:
             json.dump(data, f, indent=2)
 
     def to_dict(self) -> Dict[str, Any]:
-        """Export as dict for agents."""
+        """Export the persisted fields plus stable agent-facing groups."""
         d = {}
         for key in self.__dataclass_fields__:
             val = getattr(self, key)
             if isinstance(val, Path):
                 val = str(val)
             d[key] = val
+        d["business"] = {
+            "founder_name": self.founder_name,
+            "founder_email": self.founder_email,
+            "business_name": self.business_name,
+            "business_type": self.business_type,
+            "entity_type": self.entity_type,
+            "state": self.state,
+            "home_state": self.home_state,
+            "domain": self.domain,
+        }
+        d["llm"] = self.get_llm_config()
+        d["ports"] = {
+            "wordpress": 8080,
+            "mautic": 8082,
+            "matomo": 8083,
+            "nextcloud": 8084,
+            "taiga": 9000,
+            "chatwoot": 3000,
+        }
         return d
 
     def get_llm_config(self) -> Dict[str, str]:
@@ -192,3 +214,8 @@ def init_config(**kwargs) -> LaunchOpsConfig:
     global _config
     _config = LaunchOpsConfig(**kwargs)
     return _config
+
+
+# Temporary import compatibility for integrations built against the former
+# class name. New code should use LaunchOpsConfig.
+AtlasConfig = LaunchOpsConfig

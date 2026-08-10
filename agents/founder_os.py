@@ -24,7 +24,9 @@ def _get_openai_client():
     kwargs = {"api_key": api_key} if api_key else {}
     if base_url:
         kwargs["base_url"] = base_url
-    return OpenAI(**kwargs) if OpenAI else None
+    if OpenAI is None or not api_key:
+        return None
+    return OpenAI(**kwargs)
 
 
 def _get_model():

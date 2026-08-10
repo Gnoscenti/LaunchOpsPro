@@ -130,7 +130,7 @@ LaunchOpsPro/
 ├── healthcheck.sh                  # Service health verification
 ├── requirements.txt                # Python dependencies
 └── tests/
-    └── test_agents.py              # 49 unit tests
+    └── test_agents.py              # Offline public-contract tests
 ```
 
 ---
@@ -164,6 +164,7 @@ cp .env.example .env
 #   OPENAI_API_KEY or ANTHROPIC_API_KEY
 #   PROOFGUARD_API_URL (default: http://localhost:3000/api/attest)
 #   ENABLE_HUMAN_APPROVAL=true (recommended)
+# Optional external gateway: OPENCLAW_WS_URL + OPENCLAW_GATEWAY_TOKEN
 
 # Verify
 python launchops.py health
@@ -448,6 +449,10 @@ STRIPE_SECRET_KEY=sk_live_...
 
 # MCP (external agent auth)
 EXTERNAL_MCP_TOKEN=...
+
+# Optional provider-neutral external agent gateway
+OPENCLAW_WS_URL=wss://your-gateway.example/ws
+OPENCLAW_GATEWAY_TOKEN=replace_at_runtime
 
 # Infrastructure
 DOMAIN=yourdomain.com

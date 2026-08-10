@@ -124,7 +124,7 @@ class MetricsAgent:
     def __init__(self, llm_client=None, config=None):
         if llm_client:
             self.client = llm_client
-        elif OpenAI:
+        elif OpenAI and os.environ.get("OPENAI_API_KEY"):
             api_key = os.environ.get("OPENAI_API_KEY", "")
             base_url = os.environ.get("OPENAI_API_BASE", os.environ.get("OPENAI_BASE_URL", ""))
             kwargs = {"api_key": api_key} if api_key else {}
@@ -204,6 +204,16 @@ class MetricsAgent:
 
         tool_costs = self.store.get_tool_costs()
         weekly_trend = self.store.get_weekly_trend()
+
+        if not self.client:
+            return {
+                "type": "cut_evaluation",
+                "date": date.today().isoformat(),
+                "status": "skipped",
+                "reason": "No LLM client available",
+                "tool_costs": tool_costs,
+                "weekly_trend": weekly_trend,
+            }
 
         system_msg = """You are a ruthless financial auditor for a solo founder startup.
 CORE RULE: If a tool, subscription, or campaign does not demonstrably increase revenue or reduce cost, it MUST be cut. No exceptions. No "nice to have."

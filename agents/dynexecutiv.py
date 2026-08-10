@@ -25,7 +25,9 @@ def _get_openai_client():
     kwargs = {"api_key": api_key} if api_key else {}
     if base_url:
         kwargs["base_url"] = base_url
-    return OpenAI(**kwargs) if OpenAI else None
+    if OpenAI is None or not api_key:
+        return None
+    return OpenAI(**kwargs)
 
 
 class DynExecutivAgent:
@@ -163,6 +165,14 @@ class DynExecutivAgent:
         if crm_data is None:
             crm_data = self.pull_crm_data()
 
+        if not self.client:
+            return {
+                "type": "daily_agenda",
+                "date": date.today().isoformat(),
+                "status": "skipped",
+                "reason": "No LLM client available",
+            }
+
         system_msg = """You are the DynExecutiv Decision Engine.
 Your output drives a founder's entire day. Be specific. Name deals, amounts, deadlines.
 
@@ -217,6 +227,14 @@ Date: {date.today().isoformat()}"""
             stripe_data = self.pull_stripe_data()
         if crm_data is None:
             crm_data = self.pull_crm_data()
+
+        if not self.client:
+            return {
+                "type": "weekly_brief",
+                "week_ending": date.today().isoformat(),
+                "status": "skipped",
+                "reason": "No LLM client available",
+            }
 
         system_msg = """You are the DynExecutiv Decision Engine producing a Weekly Executive Brief.
 This brief will be reviewed every Monday morning. Make it count.

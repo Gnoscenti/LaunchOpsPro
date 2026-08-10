@@ -282,7 +282,7 @@ class FundingIntelligenceAgent(BaseAgent):
     funding avenues and generates a comprehensive funding readiness report.
     """
 
-    def __init__(self, llm_client, config: Dict):
+    def __init__(self, llm_client=None, config: Dict = None):
         super().__init__(
             name="Funding Intelligence",
             role="Funding Strategy & Formation Optimizer",

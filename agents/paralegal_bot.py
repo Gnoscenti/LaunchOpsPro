@@ -22,7 +22,7 @@ class ParalegalBot(BaseAgent):
     - License tracking
     """
     
-    def __init__(self, llm_client, config: Dict):
+    def __init__(self, llm_client=None, config: Dict = None):
         super().__init__(
             name="Paralegal Bot",
             role="Business Formation & Compliance",

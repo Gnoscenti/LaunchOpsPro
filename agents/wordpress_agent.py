@@ -22,7 +22,7 @@ class WordPressAgent(BaseAgent):
     - Optimize performance
     """
     
-    def __init__(self, llm_client, config: Dict):
+    def __init__(self, llm_client=None, config: Dict = None):
         super().__init__(
             name="WordPress Agent",
             role="Website & CMS Setup",

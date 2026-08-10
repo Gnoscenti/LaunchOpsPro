@@ -1,10 +1,11 @@
-"""
-Base Agent — LaunchOps Founder Edition
-All agents inherit from this. No permission checks. Full Tier 3 access.
-Includes shell execution, file I/O, Docker, and LLM utilities.
+"""Shared runtime contract for LaunchOps agents.
+
+The base class owns result formatting, configuration normalization, logging,
+credential access, and guarded system helpers. Consequential actions still
+belong behind the orchestrator and ProofGuard approval boundary.
 """
 
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Mapping, Optional
 from abc import ABC, abstractmethod
 from datetime import datetime
 import json
@@ -15,19 +16,122 @@ import string
 import subprocess
 
 
+class AttrDict(dict):
+    """Dictionary with read-only-style attribute access for legacy agents."""
+
+    def __getattr__(self, key: str) -> Any:
+        try:
+            return self[key]
+        except KeyError as exc:
+            raise AttributeError(key) from exc
+
+
+def _as_attr_dict(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return AttrDict({key: _as_attr_dict(item) for key, item in value.items()})
+    if isinstance(value, list):
+        return [_as_attr_dict(item) for item in value]
+    return value
+
+
 class BaseAgent(ABC):
     """
     Abstract base for all LaunchOps agents.
-    Tier 3: no permission boundaries, no approval gates, full local access.
+
+    Agents may prepare plans and deterministic artifacts directly. External
+    writes, financial actions, host mutation, and deployments must be routed
+    through the orchestrator's governance path.
     """
 
-    def __init__(self, name: str, role: str, llm_client=None, config: Dict = None):
+    def __init__(
+        self,
+        name: str,
+        role: str,
+        llm_client: Any = None,
+        config: Optional[Mapping[str, Any]] = None,
+    ):
+        if not name or not role:
+            raise ValueError("Agent name and role are required")
         self.name = name
         self.role = role
         self.llm_client = llm_client
-        self.config = config or {}
+        self.config = self._normalize_config(config)
         self.logger = logging.getLogger(f"launchops.{name}")
         self.execution_history: List[Dict] = []
+
+        # Imported lazily so the base module remains easy to import and test.
+        from core.credentials import get_vault
+
+        self.vault = get_vault()
+
+    @staticmethod
+    def _normalize_config(config: Optional[Mapping[str, Any]]) -> AttrDict:
+        """Return one mapping that supports both modern and legacy readers."""
+        if config is None:
+            from core.config import get_config
+
+            raw: Dict[str, Any] = get_config().to_dict()
+        elif hasattr(config, "to_dict"):
+            raw = dict(config.to_dict())
+        else:
+            raw = dict(config)
+
+        raw.setdefault(
+            "business",
+            {
+                "business_name": raw.get("business_name", ""),
+                "business_type": raw.get("business_type", "saas"),
+                "domain": raw.get("domain", ""),
+                "state": raw.get("state", "Delaware"),
+                "entity_type": raw.get("entity_type", "Delaware_C_Corp"),
+            },
+        )
+        raw.setdefault(
+            "llm",
+            {
+                "provider": raw.get("llm_provider", "openai"),
+                "model": raw.get("openai_model", "gpt-4.1-mini"),
+                "api_key": raw.get("openai_api_key", ""),
+                "base_url": raw.get("openai_base_url", ""),
+            },
+        )
+        raw.setdefault(
+            "ports",
+            {
+                "wordpress": 8080,
+                "mautic": 8082,
+                "matomo": 8083,
+                "nextcloud": 8084,
+                "taiga": 9000,
+                "chatwoot": 3000,
+            },
+        )
+        return _as_attr_dict(raw)
+
+    # ── Stable Result and Logging Contract ──────────────────────────────
+
+    def success(self, message: str, **payload: Any) -> Dict[str, Any]:
+        return {"success": True, "message": message, **payload}
+
+    def failure(self, message: str, **payload: Any) -> Dict[str, Any]:
+        return {"success": False, "message": message, "error": message, **payload}
+
+    def log_info(self, message: str, *args: Any) -> None:
+        self.logger.info(message, *args)
+
+    def log_warning(self, message: str, *args: Any) -> None:
+        self.logger.warning(message, *args)
+
+    def log_error(self, message: str, *args: Any) -> None:
+        self.logger.error(message, *args)
+
+    def ask_llm(self, prompt: str, system: Optional[str] = None, **kwargs: Any) -> str:
+        """Compatibility wrapper used by strategy-oriented agents."""
+        return self._call_llm(
+            system or f"You are the {self.role} agent for LaunchOpsPro.",
+            prompt,
+            **kwargs,
+        )
 
     # ── Abstract Interface ────────────────────────────────────────────────
 
@@ -49,17 +153,17 @@ class BaseAgent(ABC):
 
     def run(self, context: Dict, tasks: List[Dict]) -> Dict:
         """Run analyze → execute all tasks → validate."""
-        self.logger.info(f"Starting {self.name} workflow")
+        self.logger.info("Starting %s workflow", self.name)
         analysis = self.analyze(context)
 
         results = []
         for task in tasks:
-            self.logger.info(f"Executing: {task.get('type', 'unknown')}")
+            self.logger.info("Executing: %s", task.get("type", "unknown"))
             result = self.execute(task)
             results.append(result)
             self._record(task.get("type", "unknown"), result)
             if not result.get("success"):
-                self.logger.error(f"Task failed: {result.get('error', 'unknown')}")
+                self.logger.error("Task failed: %s", result.get("error", "unknown"))
 
         validation = self.validate({"results": results})
         return {
@@ -124,7 +228,7 @@ class BaseAgent(ABC):
             else:
                 return "[Unknown LLM client type]"
         except Exception as e:
-            self.logger.error(f"LLM call failed: {e}")
+            self.logger.error("LLM call failed: %s", e)
             return f"[LLM Error: {e}]"
 
     # ── Shell / System ────────────────────────────────────────────────────
@@ -181,8 +285,10 @@ class BaseAgent(ABC):
 
     def write_file(self, path: str, content: str) -> bool:
         try:
-            os.makedirs(os.path.dirname(path), exist_ok=True)
-            with open(path, "w") as f:
+            parent = os.path.dirname(path)
+            if parent:
+                os.makedirs(parent, exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
                 f.write(content)
             return True
         except Exception as e:
@@ -191,7 +297,7 @@ class BaseAgent(ABC):
 
     def read_file(self, path: str) -> Optional[str]:
         try:
-            with open(path) as f:
+            with open(path, encoding="utf-8") as f:
                 return f.read()
         except Exception as e:
             self.logger.error(f"Failed to read {path}: {e}")
