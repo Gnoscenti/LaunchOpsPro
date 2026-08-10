@@ -1,12 +1,16 @@
 # LaunchOpsPro
 
+[![CI](https://github.com/Gnoscenti/LaunchOpsPro/actions/workflows/ci.yml/badge.svg)](https://github.com/Gnoscenti/LaunchOpsPro/actions/workflows/ci.yml)
+
+> **Status: commercial-alpha prototype.** This repository contains working components and automated tests, but it is not production-ready. The README describes both current implementation and target product direction; see [release readiness](docs/RELEASE_READINESS.md) for verified evidence and blocking gates.
+
 **Deploy a revenue-ready business in hours. Run it with zero drift. Cut everything that doesn't pay.**
 
-LaunchOpsPro is a governed agentic platform that launches, operates, and scales revenue-generating businesses. 25 specialized AI agents execute a 20-stage pipeline — from entity formation through Stripe payments to go-to-market — while every action is attested through ProofGuard, a real-time cognitive governance layer with human-in-the-loop controls.
+LaunchOpsPro is an active multi-agent business-launch prototype combining a React/Node platform, Python orchestration, and Docker-backed operating services. The repository includes ProofGuard integration hooks and human-review concepts; current release gates explicitly track execution paths that are not yet fully governed, durable, or tenant-isolated.
 
 This is not a chatbot. This is an execution engine.
 
-**Live Platform**: [brand-architect.manus.space](https://brand-architect.manus.space)
+**Hosted demonstration**: [brand-architect.manus.space](https://brand-architect.manus.space) (availability and version may differ from this repository; verify claims against the checked-out commit)
 
 ---
 
@@ -145,7 +149,7 @@ LaunchOpsPro/
 
 ```bash
 git clone https://github.com/Gnoscenti/LaunchOpsPro.git
-cd LaunchOpsPro/launchops-founder-edition
+cd LaunchOpsPro
 
 # Python dependencies
 python -m venv venv && source venv/bin/activate

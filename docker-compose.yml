@@ -4,20 +4,21 @@ services:
     container_name: launchops-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-RootLaunchOps2026!}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Set DB_ROOT_PASSWORD in .env}
       MYSQL_DATABASE: launchops
       MYSQL_USER: launchops
-      MYSQL_PASSWORD: ${DB_PASSWORD:-LaunchOps2026!}
-    ports:
-      - "3306:3306"
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    expose:
+      - "3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$$MYSQL_ROOT_PASSWORD"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 20s
 
   python-backend:
     build:
@@ -29,9 +30,9 @@ services:
     env_file:
       - .env
     environment:
-      - MOCK_MODE=${MOCK_MODE:-false}
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-EMPTY}
-      - DASHBOARD_ORIGIN=http://137.220.36.18
+      MOCK_MODE: ${MOCK_MODE:-false}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DASHBOARD_ORIGIN: ${DASHBOARD_ORIGIN:-http://localhost:3000}
     restart: unless-stopped
 
   platform:
@@ -39,25 +40,25 @@ services:
       context: ./platform
       dockerfile: Dockerfile
       args:
-        - VITE_OAUTH_PORTAL_URL=https://manus.im
-        - VITE_APP_ID=4iPmRVDpMGdA4fQCzYmfK5
-        - VITE_AUTH_DISABLED=true
+        VITE_OAUTH_PORTAL_URL: ${VITE_OAUTH_PORTAL_URL:-}
+        VITE_APP_ID: ${VITE_APP_ID:-}
+        VITE_AUTH_DISABLED: ${VITE_AUTH_DISABLED:-false}
     container_name: launchops-platform
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
-      - PORT=3000
-      - DATABASE_URL=mysql://launchops:LaunchOps2026!@mysql:3306/launchops
-      - JWT_SECRET=launchops-self-hosted-secret-2026
-      - AUTH_BYPASS_ENABLED=true
-      - OWNER_OPEN_ID=self-hosted-admin
-      - OPENAI_API_KEY=${OPENAI_API_KEY:-EMPTY}
-      - BUILT_IN_FORGE_API_URL=https://api.openai.com
-      - BUILT_IN_FORGE_API_KEY=${OPENAI_API_KEY:-EMPTY}
-      - FOUNDER_EDITION_DIR=/opt/launchops
-      - STRIPE_SECRET_KEY=sk_test_placeholder_not_configured
-      - STRIPE_WEBHOOK_SECRET=whsec_placeholder_not_configured
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      AUTH_BYPASS_ENABLED: ${AUTH_BYPASS_ENABLED:-false}
+      OWNER_OPEN_ID: ${OWNER_OPEN_ID:?Set OWNER_OPEN_ID in .env}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      BUILT_IN_FORGE_API_URL: ${BUILT_IN_FORGE_API_URL:-https://api.openai.com}
+      BUILT_IN_FORGE_API_KEY: ${BUILT_IN_FORGE_API_KEY:-}
+      FOUNDER_EDITION_DIR: /opt/launchops
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
     depends_on:
       mysql:
         condition: service_healthy
@@ -65,7 +66,7 @@ services:
         condition: service_started
     restart: unless-stopped
     volumes:
-      - /opt/launchops/agents:/opt/launchops/agents:ro
+      - ${FOUNDER_EDITION_DIR:-.}/agents:/opt/launchops/agents:ro
 
   caddy:
     image: caddy:2-alpine
@@ -76,7 +77,7 @@ services:
       - "443:443"
       - "443:443/udp"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
