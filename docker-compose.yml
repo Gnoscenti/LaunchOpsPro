@@ -27,11 +27,13 @@ services:
     container_name: launchops-python-backend
     ports:
       - "8001:8001"
-    env_file:
-      - .env
     environment:
       MOCK_MODE: ${MOCK_MODE:-false}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      PROOFGUARD_API_URL: ${PROOFGUARD_API_URL:-http://localhost:3000}
+      PROOFGUARD_API_KEY: ${PROOFGUARD_API_KEY:-}
+      ENABLE_HUMAN_APPROVAL: ${ENABLE_HUMAN_APPROVAL:-true}
       DASHBOARD_ORIGIN: ${DASHBOARD_ORIGIN:-http://localhost:3000}
     restart: unless-stopped
 
