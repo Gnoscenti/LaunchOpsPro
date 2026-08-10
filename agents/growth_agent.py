@@ -49,7 +49,12 @@ GROWTH_METRICS = {
 
 class GrowthAgent(BaseAgent):
     def __init__(self, llm_client=None, config=None):
-        super().__init__("Growth", llm_client, config)
+        super().__init__(
+            name="Growth",
+            role="Go-to-Market Strategy",
+            llm_client=llm_client,
+            config=config,
+        )
 
     # ── Phase 2: propose_plan for ProofGuard attestation ────────────────
 

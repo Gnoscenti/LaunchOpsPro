@@ -22,7 +22,7 @@ class MauticAgent(BaseAgent):
     - Integrate with website
     """
     
-    def __init__(self, llm_client, config: Dict):
+    def __init__(self, llm_client=None, config: Dict = None):
         super().__init__(
             name="Mautic Agent",
             role="Marketing Automation Setup",

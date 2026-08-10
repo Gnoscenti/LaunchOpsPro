@@ -6,6 +6,7 @@
 python -m pip install -e "./backend[dev]"
 python -m compileall -q agents api core backend/app
 pytest -q backend/tests/test_mock_deployment.py
+pytest -q tests/test_agents.py
 
 cd dashboard
 npm ci
@@ -28,7 +29,9 @@ JWT_SECRET=local_test_secret_at_least_32_bytes OWNER_OPEN_ID=local \
 docker compose config --quiet
 ```
 
-The root `tests/test_agents.py` suite is quarantined because its contracts no longer match the current agents. Run it when repairing that debt, but do not report it as passing; see [`docs/TEST_DEBT.md`](docs/TEST_DEBT.md).
+The root agent suite is a blocking contract check. Tests must exercise public,
+offline behavior; live credentials, provider calls, host mutation, and deployments
+belong in explicitly enabled integration environments.
 
 ## Pull-request standard
 

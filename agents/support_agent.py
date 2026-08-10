@@ -55,7 +55,12 @@ COMPOSE_SNIPPET = """\
 
 class SupportAgent(BaseAgent):
     def __init__(self, llm_client=None, config=None):
-        super().__init__("Support", llm_client, config)
+        super().__init__(
+            name="Support",
+            role="Customer Support Infrastructure",
+            llm_client=llm_client,
+            config=config,
+        )
 
     def analyze(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self.log_info("Analyzing customer support requirements...")

@@ -75,7 +75,12 @@ WELCOME_SEQUENCE = [
 
 class EmailAgent(BaseAgent):
     def __init__(self, llm_client=None, config=None):
-        super().__init__("Email", llm_client, config)
+        super().__init__(
+            name="Email",
+            role="Email Delivery and Lifecycle Messaging",
+            llm_client=llm_client,
+            config=config,
+        )
 
     def analyze(self, context: Dict[str, Any]) -> Dict[str, Any]:
         self.log_info("Analyzing email configuration requirements...")

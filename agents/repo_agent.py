@@ -58,7 +58,12 @@ jobs:
 
 class RepoAgent(BaseAgent):
     def __init__(self, llm_client=None, config=None):
-        super().__init__("Repo", llm_client, config)
+        super().__init__(
+            name="Repo",
+            role="Source Repository Operations",
+            llm_client=llm_client,
+            config=config,
+        )
         self._github = None
 
     def _get_github(self):
