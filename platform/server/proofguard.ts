@@ -72,7 +72,7 @@ const RISK_BASE_SCORES: Record<string, number> = {
 };
 
 // Agents that handle money, legal, or infrastructure get elevated scrutiny
-const HIGH_RISK_AGENTS = new Set([
+const HIGH_RISK_AGENTS = new Set<string>([
   // "stripe-integration",
   // "formation-advisor",
   "paperwork-ip",
@@ -82,7 +82,7 @@ const HIGH_RISK_AGENTS = new Set([
 ]);
 
 // Agents that require HITL by default (payments, legal formation)
-const HITL_REQUIRED_AGENTS = new Set([
+const HITL_REQUIRED_AGENTS = new Set<string>([
   // Disabled for self-hosted demo mode
   // "stripe-integration",
   // "formation-advisor",

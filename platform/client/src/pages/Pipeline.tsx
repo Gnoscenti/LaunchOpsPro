@@ -721,12 +721,12 @@ function MissionControl({
             <Badge variant="secondary" className="text-[9px]">
               {(meta.model as string) ?? "gpt-4.1-mini"}
             </Badge>
-            {meta.latencyMs && (
+            {typeof meta.latencyMs === "number" && (
               <span className="text-[9px] text-muted-foreground font-[IBM_Plex_Mono]">
                 {((meta.latencyMs as number) / 1000).toFixed(1)}s
               </span>
             )}
-            {meta.tokens && (
+            {typeof meta.tokens === "number" && (
               <span className="text-[9px] text-muted-foreground font-[IBM_Plex_Mono]">
                 {meta.tokens as number} tokens
               </span>

@@ -1002,7 +1002,7 @@ registerAgent({
   version: "1.0.0",
   description:
     "Generates Terms of Service, Privacy Policy, DMCA policy, contractor agreements, NDA templates, and compliance documentation.",
-  capabilities: ["legal", "document-generation"],
+  capabilities: ["legal", "content_generation"],
   executionMode: "llm",
   modelPreference: "fast",
   outputFormat: "json_schema",
@@ -1029,7 +1029,7 @@ registerAgent({
   version: "1.0.0",
   description:
     "Generates brand voice guide, color palette recommendations, logo creative brief, tagline options, and brand positioning statement.",
-  capabilities: ["branding", "creative"],
+  capabilities: ["marketing", "content"],
   executionMode: "llm",
   modelPreference: "fast",
   outputFormat: "json_schema",
@@ -1056,7 +1056,7 @@ registerAgent({
   version: "1.0.0",
   description:
     "Generates feature specifications, user stories, MVP scope definition, wireframe descriptions, and technical requirements.",
-  capabilities: ["product", "engineering"],
+  capabilities: ["strategy", "project-management"],
   executionMode: "llm",
   modelPreference: "fast",
   outputFormat: "json_schema",
@@ -1110,7 +1110,7 @@ registerAgent({
   version: "1.0.0",
   description:
     "Generates org charts, job descriptions for key roles, contractor briefs, interview questions, and compensation benchmarks.",
-  capabilities: ["hr", "recruiting"],
+  capabilities: ["project-management", "communication"],
   executionMode: "llm",
   modelPreference: "fast",
   outputFormat: "json_schema",
@@ -1137,7 +1137,7 @@ registerAgent({
   version: "1.0.0",
   description:
     "Generates standard operating procedures, workflow diagrams, daily/weekly checklists, and tool stack integration plans.",
-  capabilities: ["operations", "automation"],
+  capabilities: ["project-management", "automation"],
   executionMode: "llm",
   modelPreference: "fast",
   outputFormat: "json_schema",
